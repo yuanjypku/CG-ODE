@@ -318,3 +318,62 @@ def test_data_social(model, pred_length, condition_length, dataloader, device, a
 				total[key] = total[key] / n_test_batches
 
 	return total
+
+
+
+def split_multi_batchGraph(x,edge_weight,edge_index,x_time,edge_time,batch,batch_y):
+	# '将多encoder_batch分成单batch，适用于graFormer'
+	num_nodes = []
+	num_batch = len(batch.unique())
+	for i_b in range(num_batch):
+		num_nodes.append((batch==i_b).sum())
+	assert(max(num_nodes)==min(num_nodes))
+	num_node = num_nodes[0]
+
+	# 获取分边的区间
+	edge_clip = []
+	for i_b in range(num_batch):
+		edge_clip.append(torch.nonzero(edge_index[0] == 1050*i_b)[0])
+	edge_clip.append(-1)
+
+	xs = []
+	edge_weights = [] # 
+	edge_indexes = [] #
+	x_times = []
+	edge_times = []
+	batches = []
+	batch_ys = [] # TODO: 查看怎么改
+	for i_b in range(num_batch):
+		xs.append(x[num_node*i_b:num_node*(i_b+1)])
+		edge_weights.append(edge_weight[edge_clip[i_b]:edge_clip[i_b+1]])
+		edge_indexes.append(edge_index[...,edge_clip[i_b]:edge_clip[i_b+1]] % num_node)
+		x_times.append(x_time[num_node*i_b:num_node*(i_b+1)])
+		edge_times.append(edge_time[edge_clip[i_b]:edge_clip[i_b+1]])
+		batches.append(batch[num_node*i_b:num_node*(i_b+1)])
+		# ys?
+	return xs, edge_weights, edge_indexes, x_times, edge_times, batches, batch_ys
+
+class Parameter(nn.Module):
+	def __init__(self, val, frozen=False):
+		super().__init__()
+		val = torch.Tensor(val)
+		self.val = val
+		self.param = nn.Parameter(val)
+		self.frozen = frozen
+
+	def forward(self):
+		if self.frozen:
+			self.val = self.val.to(self.param.device)
+			return self.val
+		else:
+			return self.param
+
+	def freeze(self):
+		self.val = self.param.detach().clone()
+		self.frozen = True
+
+	def unfreeze(self):
+		self.frozen = False
+	
+	def __repr__(self):
+		return "val: {}, param: {}".format(self.val.cpu(), self.param.detach().cpu())

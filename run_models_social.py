@@ -116,7 +116,7 @@ if __name__ == '__main__':
     ##################################################################
     # Training
 
-    log_path = "/home/zijiehuang/COVID19_social/logs/" + args.alias +"_" + args.dataset +  "_Con_"  + str(args.condition_length) +  "_Pre_" + str(args.pred_length) + "_" + str(experimentID) + ".log"
+    log_path = "./logs/" + args.alias +"_" + args.dataset +  "_Con_"  + str(args.condition_length) +  "_Pre_" + str(args.pred_length) + "_" + str(experimentID) + ".log"
     if not os.path.exists("logs/"):
         utils.makedirs("logs/")
     logger = utils.get_logger(logpath=log_path, filepath=os.path.abspath(__file__))

@@ -1,3 +1,22 @@
+# import sys
+# if __name__ == '__main__': #用于debug
+#     sys.path.append("/nvme/yuanjingyang/CG-ODE/")
+import os
+import time
+import datetime
+import argparse
+import os.path as path
+import torch.backends.cudnn as cudnn
+from torch.utils.data import DataLoader
+from progress.bar import Bar
+from common.log import Logger, savefig
+from common.utils import AverageMeter, lr_decay, save_ckpt
+from common.data_utils import fetch, read_3d_data, create_2d_data
+from common.generators import PoseGenerator
+from common.loss import mpjpe, p_mpjpe
+from network.GraFormer import GraFormer, adj_mx_from_edges
+from tqdm import tqdm
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -197,7 +216,7 @@ class Node_GCN(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(out_dims,elementwise_affine = False)
 
-        glorot(self.w_node)
+        glorot(self.w_node) #按照glorot方法初始化参数
 
 
     def forward(self, inputs, edges,z_0):
@@ -207,6 +226,7 @@ class Node_GCN(nn.Module):
         :param edges: [K,N*N], after normalize
         :param z_0: [K*N,D],
         :return:
+        ( K:num_batch, N:num_node, D:num_feature. )
         '''
         inputs = self.layer_norm(inputs)
 
@@ -220,6 +240,7 @@ class Node_GCN(nn.Module):
         x_hidden = x_hidden.view(-1,num_feature) #[K*N,D]
 
         x_new = F.gelu(x_hidden) - inputs + z_0
+        # x_new = F.gelu(x_hidden)  + z_0 # TODO:用args来搞这一步操作！(效果小，搁置)
 
         return self.dropout(x_new)
 
@@ -270,9 +291,20 @@ class GNN(nn.Module):
         else: # ODE GNN
             assert self.in_dim == self.n_hid
 
-        # first layer is input layer
-        for l in range(0,n_layers):
-            self.gcs.append(GeneralConv(conv_name, self.n_hid, self.n_hid,  n_heads, dropout,args))
+        self.CVPR = args.CVPR
+        if not args.CVPR: # 原方法
+            # first layer is input layer
+            for l in range(0,n_layers):
+                self.gcs.append(GeneralConv(conv_name, self.n_hid, self.n_hid,  n_heads, dropout,args))
+        else: # 尝试使用CVPR
+            dim_model = 96
+            n_layer = 5
+            n_head = 4
+            dropout = 0.25
+            self.num_pts = 1050 # N*T1
+            self.src_mask = torch.tensor([[[True]* self.num_pts]]).cuda()
+            self.gra_former = GraFormer(adj=None, hid_dim=dim_model, coords_dim=(self.n_hid,self.n_hid), n_pts=self.num_pts,
+                        num_layers=args.graf_layer, n_head=n_head, dropout=dropout)
 
         if conv_name in  ['GTrans'] :
             self.temporal_net = TemporalEncoding(n_hid)  #// Encoder, needs positional encoding for sequence aggregation.
@@ -285,10 +317,20 @@ class GNN(nn.Module):
             h_t = self.drop(F.gelu(self.adapt_w(x)))  #initial input for encoder
 
 
-        for gc in self.gcs:
-            h_t = gc(h_t, edge_index, edge_weight, x_time,edge_time)  #[num_nodes,d]
+        if not self.CVPR: # 原方法
+            for gc in self.gcs:
+                h_t = gc(h_t, edge_index, edge_weight, x_time,edge_time)  #[num_nodes,d]
+        else:# 尝试使用CVPR
+            # 未考虑edge weight
+            h_ts, edge_weights, edge_indexes, x_times, edge_times, batches, batch_ys= \
+                utils.split_multi_batchGraph(h_t,edge_weight,edge_index,x_time,edge_time,batch,batch_y)
+            for i in range(len(h_ts)):
+                adj = adj_mx_from_edges(num_pts=h_ts[i].shape[0], edges=edge_indexes[i].cpu(), sparse=False)
+                h_ts[i] = self.gra_former(h_ts[i], mask=self.src_mask, adj = adj.cuda()).squeeze()
+            h_t = torch.cat(h_ts,0)
 
-        ### Output
+
+        ### Output TODO:回头仔细看一下encoder这块是怎么做的attention
         if batch!= None:  ## for encoder
             batch_new = self.rewrite_batch(batch,batch_y) #group by balls
 
