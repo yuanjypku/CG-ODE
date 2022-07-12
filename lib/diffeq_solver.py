@@ -83,10 +83,17 @@ class DiffeqSolver(nn.Module):
         node_initial = node_edge_initial[:K_N,:]
         self.ode_func.set_initial_z0(node_initial)
 
+        # monmentum:添加对m的初始化（按照0来初始化）
+        if self.args.heavyBall:
+            reczeros = torch.zeros_like(node_edge_initial)
+            node_edge_initial = torch.cat([node_edge_initial, reczeros], dim=-2) 
 
         # Results
         pred_y = odeint(self.ode_func, node_edge_initial, time_steps_to_predict,
             rtol=self.odeint_rtol, atol=self.odeint_atol, method = self.ode_method) #[time_length, K*N + K*N*N, D]
+
+        if self.args.heavyBall:
+            pred_y, _ = torch.split(pred_y, pred_y.shape[-2]//2, dim=-2) #丢弃m只保留z
 
         pred_y = pred_y.permute(1,0,2) #[ K*N + K*N*N, time_length, d]
 
@@ -100,7 +107,7 @@ class DiffeqSolver(nn.Module):
 
 
 class CoupledODEFunc(nn.Module):
-    def __init__(self, node_ode_func_net,edge_ode_func_net,num_atom, dropout,device = torch.device("cpu")):
+    def __init__(self, node_ode_func_net,edge_ode_func_net,num_atom, dropout,device = torch.device("cpu"),args=None):
         """
         input_dim: dimensionality of the input
         latent_dim: dimensionality used for ODE. Analog of a continous latent state
@@ -113,6 +120,22 @@ class CoupledODEFunc(nn.Module):
         self.num_atom = num_atom
         self.nfe = 0
         self.dropout = nn.Dropout(dropout)
+        self.heavyBall = args.heavyBall
+
+        # Momentum parameters
+        if self.heavyBall:
+            self.gamma = utils.Parameter([args.gamma_guess], frozen=False)
+            self.gammaact = nn.Sigmoid() if args.gamma_act == 'sigmoid' else args.gamma_act
+            self.corr = utils.Parameter([args.corr], frozen=args.corrf)
+            self.sp = nn.Softplus()
+            self.sign = args.sign # Sign of df
+            self.elem_t = None
+            if args.actv_h is None:  # Activation for dh, GHBNODE only
+                self.actv_h = nn.Identity()  
+            elif args.actv_h == 'sigmoid':
+                self.actv_h = nn.Sigmoid() 
+            else:
+                raise NotImplementedError
 
 
     def forward(self, t_local, z, backwards = False):
@@ -124,7 +147,24 @@ class CoupledODEFunc(nn.Module):
         """
         self.nfe += 1
 
+        if not self.heavyBall:
+            grad = self.get_diff_z(z)
+        else:
+            # print('debug:z.shape=',z.shape,'-'*80)  
+            h, m = torch.split(z, z.shape[-2]//2, dim=-2)
+            dh = self.actv_h(- m)
+            dm = self.get_diff_z(h) * self.sign - self.gammaact(self.gamma()) * m
+            dm = dm + self.sp(self.corr()) * h
+            grad = torch.cat((dh, dm), dim=-2)
+            if self.elem_t is None:
+                # TODO:检查elem_t的用法
+                pass
+            else:
+                grad = self.elem_t * grad
 
+        return grad
+
+    def get_diff_z(self,z):
         node_attributes = z[:self.K_N,:]
         edge_attributes = z[self.K_N:,:]
         assert (not torch.isnan(node_attributes).any())

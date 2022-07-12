@@ -53,6 +53,7 @@ class Edge_NRI(nn.Module):
 
 
     def rel_rec_compute(self):
+        # 应该使用了一个运算，直接所有把receive点和send点两两拼接，便于后续传入edge
         fully_connected = np.ones([self.num_atoms, self.num_atoms])
         rel_send = np.array(utils.encode_onehot(np.where(fully_connected)[0]),
                             dtype=np.float32)  # every node as one-hot[10000], (N*N,N)
@@ -60,6 +61,7 @@ class Edge_NRI(nn.Module):
                            dtype=np.float32)  # every node as one-hot[10000], (N*N,N)
         rel_send = torch.FloatTensor(rel_send).to(self.device)
         rel_rec = torch.FloatTensor(rel_rec).to(self.device)
+        # eg: rel_send=[[1,0],[1,0],[0,1],[0,1]], rel_rec=[[1,0],[0,1],[1,0],[0,1]]
 
         return rel_send,rel_rec
 

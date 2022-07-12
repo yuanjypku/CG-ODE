@@ -24,10 +24,11 @@ def create_CoupledODE_model(args, input_dim, z0_prior, obsrv_std, device):
 		ode_input_dim = ode_hidden_dim
 
 
-	rec_ouput_dim = ode_hidden_dim*2 # Need to split the vector into mean and variance (multiply by 2)
+
 
 
 	#Encoder related
+	rec_ouput_dim = ode_hidden_dim*2 # Need to split the vector into mean and variance (multiply by 2)
 
 	encoder_z0 = GNN(in_dim=input_dim, n_hid=rec_hidden_dim, out_dim=rec_ouput_dim, n_heads=1,
 						 n_layers=args.rec_layers, dropout=args.dropout, conv_name=args.z0_encoder,is_encoder=True, args = args)  # [b,n_ball,e]
@@ -48,11 +49,11 @@ def create_CoupledODE_model(args, input_dim, z0_prior, obsrv_std, device):
 		node_ode_func_net=node_ode_func_net,
 		edge_ode_func_net=edge_ode_func_net,
 		device=device,
-		num_atom = args.num_atoms,dropout=args.dropout).to(device)
+		num_atom = args.num_atoms,dropout=args.dropout,args=args).to(device)
 
 
 
-	diffeq_solver = DiffeqSolver(coupled_ode_func, args.solver, args=args,odeint_rtol=1e-2, odeint_atol=1e-2, device=device)
+	diffeq_solver = DiffeqSolver(coupled_ode_func, args.solver, args=args,odeint_rtol=args.rtol, odeint_atol=args.atol, device=device)
 
     #Decoder related
 	decoder_node = Decoder(ode_hidden_dim, output_dim).to(device)
