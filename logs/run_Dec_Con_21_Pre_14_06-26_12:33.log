@@ -1,0 +1,25 @@
+/nvme/yuanjingyang/CG-ODE/run_models_covid.py
+run_models_covid.py
+Namespace(save='experiments/', load=None, dataset='Dec', datapath='data/', pred_length=14, condition_length=21, features='Confirmed,Deaths,Recovered,Mortality_Rate,Testing_Rate,Population,Mobility', split_interval=3, feature_out='Deaths', niters=100, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=20, rec_layers=1, gen_layers=1, debug=False, heavyBall=False, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1, augment_dim=0, solver='rk4', alias='run', output_dim=1, feature_out_index=[1], num_atoms=50, CVPR=False)
+run
+Experiment 06-26_12:33
+Epoch 0001 [Train seq (cond on sampled tp)] | Loss 4641424.961771 | MAPE 0.065317 | RMSE 295.820198 | Likelihood -4641423.646477 | KL fp 1.3153 | FP STD 0.4671|
+Epoch 0001 [Val seq (cond on sampled tp)] |  MAPE NAN | RMSE NAN |
+Epoch 0001 [Test seq (cond on sampled tp)] | MAPE 0.122893 | RMSE 907.143880|
+0.13605628907680511,0.1271892935037613,0.1054338589310646
+852.0136075791278,938.10826933782,931.3097631830132
+0.13605628907680511,0.1271892935037613,0.1054338589310646
+852.0136075791278,938.10826933782,931.3097631830132
+Epoch 0001 [Test seq (cond on sampled tp)] | Best Test MAPE 0.122893|Best Test RMSE 907.143880|
+Experiment 06-26_12:33
+Epoch 0002 [Train seq (cond on sampled tp)] | Loss 4464551.379649 | MAPE 0.096546 | RMSE 287.205136 | Likelihood -4464548.983097 | KL fp 2.3966 | FP STD 0.8237|
+Epoch 0002 [Val seq (cond on sampled tp)] |  MAPE NAN | RMSE NAN |
+Epoch 0002 [Test seq (cond on sampled tp)] | MAPE 0.108755 | RMSE 872.834039|
+0.11610393971204758,0.11105082184076309,0.09911087155342102
+814.341298228206,904.8752331122784,899.2855845058343
+0.11610393971204758,0.11105082184076309,0.09911087155342102
+814.341298228206,904.8752331122784,899.2855845058343
+Epoch 0002 [Test seq (cond on sampled tp)] | Best Test MAPE 0.108755|Best Test RMSE 872.834039|
+Experiment 06-26_12:33
+Epoch 0003 [Train seq (cond on sampled tp)] | Loss 4158571.134537 | MAPE 0.215476 | RMSE 271.274288 | Likelihood -4158566.432406 | KL fp 4.7021 | FP STD 1.0764|
+Epoch 0003 [Val seq (cond on sampled tp)] |  MAPE NAN | RMSE NAN |
