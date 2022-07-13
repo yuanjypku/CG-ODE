@@ -1,0 +1,23 @@
+/nvme/yuanjingyang/CG-ODE/run_models_covid.py
+run_models_covid.py --heavyBall --gamma_guess 0.0 --corr 5 --solver dopri5 --tol 1e-3 --atol 1e-4
+Namespace(save='experiments/', load=None, dataset='Dec', datapath='data/', pred_length=14, condition_length=21, features='Confirmed,Deaths,Recovered,Mortality_Rate,Testing_Rate,Population,Mobility', split_interval=3, feature_out='Deaths', niters=100, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=20, rec_layers=1, gen_layers=1, CVPR=False, graf_layer=1, heavyBall=True, actv_h=None, gamma_guess=0.0, gamma_act='sigmoid', corr=5, corrf=True, sign=1, augment_dim=0, solver='dopri5', tol=0.001, atol=0.0001, alias='run', output_dim=1, feature_out_index=[1], num_atoms=50)
+run
+Experiment 07-12_05:01
+Epoch 0001 [Train seq (cond on sampled tp)] | Loss 4401929.150227 | MAPE 0.063394 | RMSE 286.592740 | Likelihood -4401927.600858 | KL fp 1.5494 | FP STD 0.4307 | ->nfe  149.75 | <-nfe 11147.75
+Epoch 0001 [Val seq (cond on sampled tp)] |  MAPE 0.057945 | RMSE 306.389229 |
+Best Val!
+Epoch 0001 [Test seq (cond on sampled tp)] | MAPE 0.123537 | RMSE 907.012654|
+0.1369774341583252,0.1278563141822815,0.10577874630689621
+852.502712605655,938.0226209958905,930.5126275338772
+0.1369774341583252,0.1278563141822815,0.10577874630689621
+852.502712605655,938.0226209958905,930.5126275338772
+Epoch 0001 [Test seq (cond on sampled tp)] | Best Test MAPE 0.123537|Best Test RMSE 907.012654|
+Experiment 07-12_05:01
+Epoch 0002 [Train seq (cond on sampled tp)] | Loss 4221595.153344 | MAPE 0.093085 | RMSE 276.912160 | Likelihood -4221591.960989 | KL fp 3.1924 | FP STD 0.6588 | ->nfe  187.25 | <-nfe 14204.00
+Epoch 0002 [Val seq (cond on sampled tp)] |  MAPE 0.067244 | RMSE 282.118312 |
+Epoch 0002 [Test seq (cond on sampled tp)] | MAPE 0.112167 | RMSE 870.219672|
+0.12110412120819092,0.11423701792955399,0.10115951299667358
+814.3569549036835,901.8893709873734,894.412691379097
+0.12110412120819092,0.11423701792955399,0.10115951299667358
+814.3569549036835,901.8893709873734,894.412691379097
+Epoch 0002 [Test seq (cond on sampled tp)] | Best Test MAPE 0.112167|Best Test RMSE 870.219672|

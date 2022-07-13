@@ -1,0 +1,16 @@
+/nvme/yuanjingyang/CG-ODE/run_models_covid.py
+/nvme/yuanjingyang/CG-ODE/run_models_covid.py
+Namespace(save='experiments/', load=None, dataset='Dec', datapath='data/', pred_length=14, condition_length=21, features='Confirmed,Deaths,Recovered,Mortality_Rate,Testing_Rate,Population,Mobility', split_interval=3, feature_out='Deaths', niters=100, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=20, rec_layers=1, gen_layers=1, debug=False, heavyBall=False, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1, augment_dim=0, solver='rk4', alias='run', output_dim=1, feature_out_index=[1], num_atoms=50, CVPR=False)
+run
+Experiment 06-27_15:51
+Epoch 0001 [Train seq (cond on sampled tp)] | Loss 4641425.037298 | MAPE 0.065319 | RMSE 295.820201 | Likelihood -4641423.721858 | KL fp 1.3154 | FP STD 0.4671|
+Epoch 0001 [Val seq (cond on sampled tp)] |  MAPE NAN | RMSE NAN |
+Epoch 0001 [Test seq (cond on sampled tp)] | MAPE 0.122909 | RMSE 907.143522|
+0.1360858678817749,0.12720277905464172,0.1054387241601944
+852.0128373446024,938.1083359612577,931.3093940791106
+0.1360858678817749,0.12720277905464172,0.1054387241601944
+852.0128373446024,938.1083359612577,931.3093940791106
+Epoch 0001 [Test seq (cond on sampled tp)] | Best Test MAPE 0.122909|Best Test RMSE 907.143522|
+Experiment 06-27_15:51
+Epoch 0002 [Train seq (cond on sampled tp)] | Loss 4464616.852334 | MAPE 0.096875 | RMSE 287.207886 | Likelihood -4464614.448969 | KL fp 2.4034 | FP STD 0.8237|
+Epoch 0002 [Val seq (cond on sampled tp)] |  MAPE NAN | RMSE NAN |
