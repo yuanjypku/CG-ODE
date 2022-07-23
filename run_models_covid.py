@@ -47,9 +47,10 @@ parser.add_argument('--ode-dims', type=int, default= 20, help="Dimensionality of
 parser.add_argument('--rec-layers', type=int, default=1, help="Number of layers in recognition model ")
 parser.add_argument('--gen-layers', type=int, default=1, help="Number of layers  ODE func ")
 
-# GraFormer
-parser.add_argument('--CVPR', action='store_true', help="use CVPR encoder")
-parser.add_argument('--graf_layer', type=int, default=1, help="layer of graformers")
+# encoder choice
+parser.add_argument('--encoder','-e',type=str, default='base', help="CVPR, Cheb, Cheb_cat,...")
+parser.add_argument('--graf_layer', type=int, default=1, help="(CVPR mode)layer of graformers")
+parser.add_argument('--cheb_K', type=int, default=2, help="(Cheb mode)order of Cheblayer")
 
 # momentum
 parser.add_argument('--heavyBall', action='store_true', help="Wheather to use Momentum")
