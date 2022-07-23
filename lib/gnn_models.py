@@ -15,6 +15,7 @@ from common.data_utils import fetch, read_3d_data, create_2d_data
 from common.generators import PoseGenerator
 from common.loss import mpjpe, p_mpjpe
 from network.GraFormer import GraFormer, adj_mx_from_edges
+from network.ChebConv import ChebConv
 from tqdm import tqdm
 
 import torch
@@ -279,11 +280,11 @@ class GNN(nn.Module):
 
         if is_encoder:
             # If encoder, adding 1.) sequence_W 2.)transform_W ( to 2*z_dim).
-            self.sequence_w = nn.Linear(n_hid,n_hid) # for encoder
+            self.sequence_w = nn.Linear(n_hid*2 if args.encoder=='Cheb_cat' else n_hid,n_hid*2 if args.encoder=='Cheb_cat' else n_hid) # for encoder
             self.hidden_to_z0 = nn.Sequential(
-		        nn.Linear(n_hid, n_hid//2),
+		        nn.Linear(n_hid*2 if args.encoder in ['Cheb_cat','Cheb_att'] else n_hid, (n_hid*2 if args.encoder in ['Cheb_cat','Cheb_att'] else n_hid)//2),
 		        nn.Tanh(),
-		        nn.Linear(n_hid//2, out_dim))
+		        nn.Linear((n_hid*2 if args.encoder in ['Cheb_cat','Cheb_att'] else n_hid)//2, out_dim))
             self.adapt_w = nn.Linear(in_dim,n_hid)
             utils.init_network_weights(self.sequence_w)
             utils.init_network_weights(self.hidden_to_z0)
@@ -291,12 +292,17 @@ class GNN(nn.Module):
         else: # ODE GNN
             assert self.in_dim == self.n_hid
 
-        self.CVPR = args.CVPR
-        if not args.CVPR: # 原方法
-            # first layer is input layer
-            for l in range(0,n_layers):
-                self.gcs.append(GeneralConv(conv_name, self.n_hid, self.n_hid,  n_heads, dropout,args))
-        else: # 尝试使用CVPR
+        self.mode = args.encoder
+        # first layer is input layer
+        for l in range(0,n_layers):
+            self.gcs.append(GeneralConv(conv_name, self.n_hid, self.n_hid,  n_heads, dropout,args))
+        if self.mode in ['Cheb', 'Cheb_att', 'Cheb_cat']:
+            self.cheb = ChebConv(in_c=self.n_hid, out_c=self.n_hid, K=args.cheb_K)
+            # if self.mode=='Cheb_cat': #注意层数cat TODO:这样做毕竟不严格控制变量，再看看
+            #     #尝试过cat了gTrans和Cheb在用线性层降维，效果不好
+            #     self.cat_w = nn.Linear(n_hid*2,n_hid)
+            #     utils.init_network_weights(self.cat_w)
+        elif self.mode=='CVPR': # 尝试使用CVPR
             dim_model = 96
             n_layer = 5
             n_head = 4
@@ -307,7 +313,7 @@ class GNN(nn.Module):
                         num_layers=args.graf_layer, n_head=n_head, dropout=dropout)
 
         if conv_name in  ['GTrans'] :
-            self.temporal_net = TemporalEncoding(n_hid)  #// Encoder, needs positional encoding for sequence aggregation.
+            self.temporal_net = TemporalEncoding(n_hid*2 if self.mode=='Cheb_cat' else n_hid)  #// Encoder, needs positional encoding for sequence aggregation.
 
     def forward(self, x, edge_weight=None, edge_index=None, x_time=None, edge_time=None,batch= None, batch_y = None):  #aggregation part
 
@@ -316,11 +322,24 @@ class GNN(nn.Module):
         else:
             h_t = self.drop(F.gelu(self.adapt_w(x)))  #initial input for encoder
 
-
-        if not self.CVPR: # 原方法
+        if self.mode=='base': # 原方法
             for gc in self.gcs:
                 h_t = gc(h_t, edge_index, edge_weight, x_time,edge_time)  #[num_nodes,d]
-        else:# 尝试使用CVPR
+        elif self.mode=='Cheb':
+            h_t = self.cheb_forward(h_t,edge_weight, edge_index, x_time, edge_time,batch, batch_y )
+            for gc in self.gcs:
+                h_t = gc(h_t, edge_index, edge_weight, x_time,edge_time)  #[num_nodes,d]
+        elif self.mode=='Cheb_cat':
+            h_t0 = self.cheb_forward(h_t,edge_weight, edge_index, x_time, edge_time,batch, batch_y )
+            for gc in self.gcs:
+                h_t = gc(h_t, edge_index, edge_weight, x_time,edge_time)  #[num_nodes,d]
+            h_t = torch.cat([h_t0,h_t],dim=-1)        
+            # h_t = self.cat_w(h_t)
+        elif self.mode=='Cheb_att':
+            h_t0 = self.cheb_forward(h_t,edge_weight, edge_index, x_time, edge_time,batch, batch_y )
+            for gc in self.gcs:
+                h_t = gc(h_t, edge_index, edge_weight, x_time,edge_time)  #[num_nodes,d]           
+        elif self.mode=='CVPR':# 尝试使用CVPR
             # 未考虑edge weight
             h_ts, edge_weights, edge_indexes, x_times, edge_times, batches, batch_ys= \
                 utils.split_multi_batchGraph(h_t,edge_weight,edge_index,x_time,edge_time,batch,batch_y)
@@ -328,6 +347,8 @@ class GNN(nn.Module):
                 adj = adj_mx_from_edges(num_pts=h_ts[i].shape[0], edges=edge_indexes[i].cpu(), sparse=False)
                 h_ts[i] = self.gra_former(h_ts[i], mask=self.src_mask, adj = adj.cuda()).squeeze()
             h_t = torch.cat(h_ts,0)
+        else:
+            raise NotImplementedError
 
 
         ### Output TODO:回头仔细看一下encoder这块是怎么做的attention
@@ -342,8 +363,9 @@ class GNN(nn.Module):
                 torch.squeeze(torch.bmm(torch.unsqueeze(attention_vector_expanded, 1), torch.unsqueeze(h_t, 2)))).view(
                 -1, 1)  # [num_nodes]
             nodes_attention = attention_nodes * h_t  # [num_nodes,d]
+            if self.mode=='Cheb_att':
+                nodes_attention = torch.cat([nodes_attention, h_t0],1)
             h_ball = global_mean_pool(nodes_attention, batch_new)  # [num_ball,d] without activation
-
             h_out = self.hidden_to_z0(h_ball) #[num_ball,2*z_dim] Must ganrantee NO 0 ENTRIES!
             mean,mu = self.split_mean_mu(h_out)
             mu = mu.abs()
@@ -352,6 +374,16 @@ class GNN(nn.Module):
         else:  # for ODE
             h_out = h_t
             return h_out
+
+    def cheb_forward(self,h_t, edge_weight=None, edge_index=None, x_time=None, edge_time=None,batch= None, batch_y = None):
+        h_ts, edge_weights, edge_indexes, x_times, edge_times, batches, batch_ys= \
+            utils.split_multi_batchGraph(h_t,edge_weight,edge_index,x_time,edge_time,batch,batch_y)
+        # 未考虑edge weight
+        for i in range(len(h_ts)):
+            adj = adj_mx_from_edges(num_pts=h_ts[i].shape[0], edges=edge_indexes[i].cpu(), sparse=False)
+            h_ts[i] = self.cheb(h_ts[i], adj.cuda()).squeeze()
+        h_t = torch.cat(h_ts,0)
+        return h_t
 
     def rewrite_batch(self,batch, batch_y):
         assert (torch.sum(batch_y).item() == list(batch.size())[0])
