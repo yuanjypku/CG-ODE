@@ -1,0 +1,7 @@
+/nvme/yuanjingyang/CG-ODE/ode18/run.py
+/nvme/yuanjingyang/CG-ODE/ode18/run.py
+Namespace(dataset='Dec', datapath='data/', pred_length=14, condition_length=21, features='Confirmed,Deaths,Recovered,Mortality_Rate,Testing_Rate,Population,Mobility', split_interval=3, feature_out='Deaths', niters=100, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, heavyBall=False, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1, augment_dim=0, solver='rk4', rtol=0.01, atol=0.01, alias='run', output_dim=1, feature_out_index=[1], num_atoms=50)
+run
+Experiment 08-14_11:51
+Epoch 0001 [Train seq (cond on sampled tp)] | Loss 8136171.687500 | MAPE 0.205347 | RMSE 265.241303 | Likelihood -8136168.031250 | KL fp 3.6968 | FP STD 0.6844 | ->nfe   97.50 | <-nfe   52.00
+Epoch 0001 [Val seq (cond on sampled tp)] |  MAPE 0.121880 | RMSE 239.768174 |
