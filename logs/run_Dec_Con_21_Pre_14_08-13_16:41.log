@@ -1,0 +1,29 @@
+/nvme/yuanjingyang/CG-ODE/run_models_covid.py
+/nvme/yuanjingyang/CG-ODE/run_models_covid.py
+Namespace(save='experiments/', load=None, dataset='Dec', datapath='data/', pred_length=14, condition_length=21, features='Confirmed,Deaths,Recovered,Mortality_Rate,Testing_Rate,Population,Mobility', split_interval=3, feature_out='Deaths', niters=100, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=20, rec_layers=1, gen_layers=1, encoder='base', graf_layer=1, cheb_K=2, heavyBall=False, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1, augment_dim=0, solver='rk4', rtol=0.01, atol=0.01, alias='run', output_dim=1, feature_out_index=[1], num_atoms=50)
+run
+Experiment 08-13_16:41
+Epoch 0001 [Train seq (cond on sampled tp)] | Loss 4007179.413704 | MAPE 0.053517 | RMSE 265.612643 | Likelihood -4007178.155238 | KL fp 1.2585 | FP STD 0.4453 | ->nfe   52.00 | <-nfe   52.00
+Epoch 0001 [Val seq (cond on sampled tp)] |  MAPE 0.059485 | RMSE 309.237128 |
+Best Val!
+Epoch 0001 [Test seq (cond on sampled tp)] | MAPE 0.119966 | RMSE 909.923385|
+0.1392657309770584,0.12138405442237854,0.09924737364053726
+911.0329988534993,935.7635585445717,882.9735981330359
+0.1392657309770584,0.12138405442237854,0.09924737364053726
+911.0329988534993,935.7635585445717,882.9735981330359
+Epoch 0001 [Test seq (cond on sampled tp)] | Best Test MAPE 0.119966|Best Test RMSE 909.923385|
+Experiment 08-13_16:41
+Epoch 0002 [Train seq (cond on sampled tp)] | Loss 4273176.767268 | MAPE 0.079387 | RMSE 280.303064 | Likelihood -4273174.444080 | KL fp 2.3232 | FP STD 0.7450 | ->nfe   52.00 | <-nfe   52.00
+Epoch 0002 [Val seq (cond on sampled tp)] |  MAPE 0.064082 | RMSE 291.428794 |
+Epoch 0002 [Test seq (cond on sampled tp)] | MAPE 0.105156 | RMSE 880.318674|
+0.11848252266645432,0.10657884180545807,0.09040598571300507
+879.7732307248272,907.3994090255956,853.7833814850228
+0.11848252266645432,0.10657884180545807,0.09040598571300507
+879.7732307248272,907.3994090255956,853.7833814850228
+Epoch 0002 [Test seq (cond on sampled tp)] | Best Test MAPE 0.105156|Best Test RMSE 880.318674|
+Experiment 08-13_16:41
+Epoch 0003 [Train seq (cond on sampled tp)] | Loss 3975018.036513 | MAPE 0.184130 | RMSE 264.705467 | Likelihood -3975013.142832 | KL fp 4.8937 | FP STD 1.1076 | ->nfe   52.00 | <-nfe   52.00
+Epoch 0003 [Val seq (cond on sampled tp)] |  MAPE 0.089148 | RMSE 256.792977 |
+Epoch 0003 [Test seq (cond on sampled tp)] | MAPE 0.123129 | RMSE 818.452950|
+0.14448459446430206,0.1227305606007576,0.1021706685423851
+811.3250735679256,849.2649027247035,794.7688736355998
