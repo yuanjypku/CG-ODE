@@ -38,14 +38,14 @@ class VAE_Baseline(nn.Module):
 		return log_density
 
 
-	def get_loss(self, truth, pred_y, truth_gt=None,mask = None,method='MSE',istest=False):
+	def get_loss(self, truth, pred_y, truth_gt=None,mask = None,method='MSE',istest=False,need_agg=True):
 		# pred_y shape [n_traj, n_tp, n_dim]
 		# truth shape  [n_traj, n_tp, n_dim]
 
 		#Transfer from inc to cum
-
-		truth = utils.inc_to_cum(truth)
-		pred_y = utils.inc_to_cum(pred_y)
+		if need_agg:
+			truth = utils.inc_to_cum(truth)
+			pred_y = utils.inc_to_cum(pred_y)
 		num_times = truth.shape[1]
 		time_index = [num_times-1] # last timestamp
 
@@ -90,7 +90,7 @@ class VAE_Baseline(nn.Module):
 
 		print(np.sum(pred_node))
 
-	def compute_all_losses(self, batch_dict_encoder,batch_dict_decoder,batch_dict_graph ,num_atoms,edge_lamda, kl_coef = 1.,istest=False):
+	def compute_all_losses(self, batch_dict_encoder,batch_dict_decoder,batch_dict_graph ,num_atoms,edge_lamda, kl_coef = 1.,istest=False,need_agg=True):
 		'''
 
 		:param batch_dict_encoder:
@@ -167,14 +167,14 @@ class VAE_Baseline(nn.Module):
 
 		rec_likelihood = (1-edge_lamda)*rec_likelihood_node + edge_lamda * rec_likelihood_edge
 
-
+		# 在弹簧振子模型中，如果只计算终点的mape会偏高，因为相对误差不适合这类数据
 		mape_node = self.get_loss(
 			batch_dict_decoder["data"], pred_node,truth_gt=batch_dict_decoder["data_gt"],
-			mask=None,method = 'MAPE',istest = istest)  # [1]
+			mask=None,method = 'MAPE',istest = istest,need_agg=need_agg)  # [1]
 
 		mse_node = self.get_loss(
 			batch_dict_decoder["data"], pred_node,
-			mask=None, method='MSE', istest=istest)  # [1]
+			mask=None, method='MSE', istest=istest,need_agg=need_agg)  # [1]
 
 
 
