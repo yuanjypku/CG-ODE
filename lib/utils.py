@@ -126,7 +126,8 @@ def get_next_batch_test(dataloader,device):
 
 	batch_dict["data"] = data_dict["data"].to(device)
 	batch_dict["time_steps"] = data_dict["time_steps"].to(device)
-	batch_dict["masks"] = data_dict["masks"].to(device)
+	batch_dict["masks"] = torch.arange(len(data_dict["time_steps"])).to(device) if data_dict["masks"] is None else data_dict["masks"].to(device)
+	# batch_dict["masks"] = data_dict["masks"].to(device)
 	batch_dict["data_gt"] = data_dict["data_gt"].to(device)
 
 	return batch_dict
@@ -268,6 +269,61 @@ def test_data_covid(model, pred_length, condition_length, dataloader,device,args
 
 	return total,print_MAPE(MAPE_each),print_MAPE(RMSE_each)
 
+def test_data_spring(model, pred_length, condition_length, dataloader,device,args,kl_coef):
+
+
+	encoder, decoder, graph, num_batch = dataloader.load_test_data(pred_length=pred_length,
+	 															   condition_length=condition_length)
+
+
+	total = {}
+	total["loss"] = 0
+	total["likelihood"] = 0
+	total["MAPE"] = 0
+	total["RMSE"] = 0
+	total["MSE"] = 0
+	total["kl_first_p"] = 0
+	total["std_first_p"] = 0
+	MAPE_each = []
+	RMSE_each = []
+
+	n_test_batches = 0
+
+	model.eval()
+	print("Computing loss... ")
+	with torch.no_grad():
+		for _ in tqdm(range(num_batch)):
+			batch_dict_encoder = get_next_batch_new(encoder, device)
+			batch_dict_graph = get_next_batch_new(graph, device)
+			batch_dict_decoder = get_next_batch_test(decoder, device)
+
+			results = model.compute_all_losses(batch_dict_encoder, batch_dict_decoder, batch_dict_graph, args.num_atoms,
+											   edge_lamda=args.edge_lamda, kl_coef=kl_coef, istest=True,need_agg=False)
+
+			for key in total.keys():
+				if key in results:
+					var = results[key]
+					if isinstance(var, torch.Tensor):
+						var = var.detach().item()
+					if key =="MAPE":
+						MAPE_each.append(var)
+					elif key == "MSE": # assign value for both MSE and RMSE
+						RMSE_each.append(np.sqrt(var))
+						total["RMSE"] += np.sqrt(var)
+					total[key] += var
+
+			n_test_batches += 1
+
+			del batch_dict_encoder, batch_dict_graph, batch_dict_decoder, results
+
+		if n_test_batches > 0:
+			for key, value in total.items():
+				total[key] = total[key] / n_test_batches
+
+
+
+
+	return total,print_MAPE(MAPE_each),print_MAPE(RMSE_each)
 
 def test_data_social(model, pred_length, condition_length, dataloader, device, args, kl_coef):
 	encoder, decoder, graph, num_batch = dataloader.load_test_data(pred_length=pred_length,
