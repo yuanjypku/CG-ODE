@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+import random
 from lib.load_data_social import ParseData
 from tqdm import tqdm
 import argparse
@@ -48,8 +50,24 @@ parser.add_argument('--ode-dims', type=int, default= 30, help="Dimensionality of
 parser.add_argument('--rec-layers', type=int, default=1, help="Number of layers in recognition model ")
 parser.add_argument('--gen-layers', type=int, default=1, help="Number of layers  ODE func ")
 
+# encoder choice
+parser.add_argument('--encoder','-e',type=str, default='base', help="CVPR, Cheb, Cheb_cat,...")
+parser.add_argument('--graf_layer', type=int, default=1, help="(CVPR mode)layer of graformers")
+parser.add_argument('--cheb_K', type=int, default=2, help="(Cheb mode)order of Cheblayer")
+
+# momentum
+parser.add_argument('--heavyBall', action='store_true', help="Wheather to use Momentum")
+parser.add_argument('--actv_h', type=str, default=None, help="Activation for dh, GHBNODE only")
+parser.add_argument('--gamma_guess', type=float,default=-3.0,)
+parser.add_argument('--gamma_act', type=str, default='sigmoid', help="gamma action")
+parser.add_argument('--corr', type=int, default=-100, help="corr")
+parser.add_argument('--corrf', type=bool, default=True, help="corrf")
+parser.add_argument('--sign', type=int, default=1, help="sign")
+
 parser.add_argument('--augment_dim', type=int, default=0, help='augmented dimension')
-parser.add_argument('--solver', type=str, default="euler", help='dopri5,rk4,euler')
+parser.add_argument('--solver', type=str, default="rk4", help='dopri5,rk4,euler')
+parser.add_argument('--rtol', type=float,default=1e-2, help='tolerance of ode')
+parser.add_argument('--atol', type=float,default=1e-2, help='tolerance of ode adjent')
 
 parser.add_argument('--alias', type=str, default="run")
 
@@ -74,12 +92,19 @@ args.output_dim = 2
 
 if __name__ == '__main__':
     torch.manual_seed(args.random_seed)
+    torch.cuda.manual_seed_all(args.random_seed)
     np.random.seed(args.random_seed)
+    random.seed(args.random_seed)
+    os.environ['PYTHONHASHSEED'] = str(args.random_seed)
+
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
 
     # Saving Path
     file_name = os.path.basename(__file__)[:-3]  # run_models
     utils.makedirs(args.save)
-    experimentID = int(SystemRandom().random() * 100000)
+    # experimentID = int(SystemRandom().random() * 100000) 换个带时间的log名
+    experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time()+8*60**2))
 
     ############ Command log
     input_command = sys.argv
@@ -145,11 +170,17 @@ if __name__ == '__main__':
 
         optimizer.zero_grad()
         train_res = model.compute_all_losses(batch_dict_encoder, batch_dict_decoder, batch_dict_graph,args.num_atoms,edge_lamda = args.edge_lamda, kl_coef=kl_coef,istest=False)
-
+        # 记录forward中的nfe
+        forward_nfe = model.diffeq_solver.ode_func.nfe
+        model.diffeq_solver.ode_func.nfe = 0
         loss = train_res["loss"]
         loss.backward()
+        backward_nfe = model.diffeq_solver.ode_func.nfe
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-
+        try:
+            torch.nn.utils.clip_grad_norm_(model.encoder_z0.gra_former.parameters(), 1)
+        except:
+            pass
         optimizer.step()
 
         loss_value = loss.data.item()
@@ -157,16 +188,19 @@ if __name__ == '__main__':
         del loss
         torch.cuda.empty_cache()
         # train_res, loss
-        return loss_value,train_res["MAPE"],train_res['MSE'],train_res["likelihood"],train_res["kl_first_p"],train_res["std_first_p"]
+        return loss_value,train_res["MAPE"],train_res['MSE'],train_res['MAE'],train_res["likelihood"],train_res["kl_first_p"],train_res["std_first_p"],forward_nfe,backward_nfe
 
     def train_epoch(epo):
         model.train()
         loss_list = []
         MAPE_list = []
         MSE_list = []
+        MAE_list = []
         likelihood_list = []
         kl_first_p_list = []
         std_first_p_list = []
+        forward_nfe_list = []
+        backward_nfe_list = []
 
         torch.cuda.empty_cache()
 
@@ -186,13 +220,13 @@ if __name__ == '__main__':
 
             batch_dict_decoder = utils.get_next_batch(train_decoder, device)
 
-            loss, MAPE,MSE,likelihood,kl_first_p,std_first_p = train_single_batch(model,batch_dict_encoder,batch_dict_decoder,batch_dict_graph,kl_coef)
+            loss, MAPE,MSE,MAE,likelihood,kl_first_p,std_first_p,forward_nfe,backward_nfe = train_single_batch(model,batch_dict_encoder,batch_dict_decoder,batch_dict_graph,kl_coef)
 
 
         
             #saving results
-            loss_list.append(loss), MAPE_list.append(MAPE), MSE_list.append(MSE),likelihood_list.append(
-               likelihood)
+            loss_list.append(loss), MAPE_list.append(MAPE), MSE_list.append(MSE),MAE_list.append(MAE),likelihood_list.append(
+               likelihood), forward_nfe_list.append(forward_nfe),backward_nfe_list.append(backward_nfe)
             kl_first_p_list.append(kl_first_p), std_first_p_list.append(std_first_p)
 
 
@@ -205,10 +239,10 @@ if __name__ == '__main__':
 
         
 
-        message_train = 'Epoch {:04d} [Train seq (cond on sampled tp)] | Loss {:.6f} | MAPE {:.6F} | RMSE {:.6F} | Likelihood {:.6f} | KL fp {:.4f} | FP STD {:.4f}|'.format(
+        message_train = 'Epoch {:04d} [Train seq (cond on sampled tp)] | Loss {:.6f} | MAPE {:.6F} | RMSE {:.6F} | MAE {:.6F} | Likelihood {:.6f} | KL fp {:.4f} | FP STD {:.4f} | ->nfe {:7.2f} | <-nfe {:7.2f}'.format(
             epo,
-            np.mean(loss_list), np.mean(MAPE_list),np.sqrt(np.mean(MSE_list)), np.mean(likelihood_list),
-            np.mean(kl_first_p_list), np.mean(std_first_p_list))
+            np.mean(loss_list), np.mean(MAPE_list),np.sqrt(np.mean(MSE_list)),np.mean(MAE_list), np.mean(likelihood_list),
+            np.mean(kl_first_p_list), np.mean(std_first_p_list), np.mean(forward_nfe_list),np.mean(backward_nfe_list))
 
 
         return message_train,kl_coef
@@ -217,6 +251,7 @@ if __name__ == '__main__':
         model.eval()
         MAPE_list = []
         MSE_list = []
+        MAE_list = []
 
         torch.cuda.empty_cache()
 
@@ -229,16 +264,16 @@ if __name__ == '__main__':
                                                args.num_atoms, edge_lamda=args.edge_lamda, kl_coef=kl_coef,
                                                istest=False)
 
-            MAPE_list.append(val_res['MAPE']), MSE_list.append(val_res['MSE'])
+            MAPE_list.append(val_res['MAPE']), MSE_list.append(val_res['MSE']),MAE_list.append(val_res['MAE'])
             del batch_dict_encoder, batch_dict_graph, batch_dict_decoder
             # train_res, loss
             torch.cuda.empty_cache()
 
-        message_val = 'Epoch {:04d} [Val seq (cond on sampled tp)] |  MAPE {:.6F} | RMSE {:.6F} |'.format(
+        message_val = 'Epoch {:04d} [Val seq (cond on sampled tp)] |  MAPE {:.6F} | RMSE {:.6F} | MAE {:.6F} |'.format(
             epo,
-            np.mean(MAPE_list), np.sqrt(np.mean(MSE_list)))
+            np.mean(MAPE_list), np.sqrt(np.mean(MSE_list)),np.sqrt(np.mean(MAE_list)))
 
-        return message_val, np.mean(MAPE_list), np.sqrt(np.mean(MSE_list))
+        return message_val, np.mean(MAPE_list), np.sqrt(np.mean(MSE_list)),np.sqrt(np.mean(MAE_list))
 
 
 
@@ -262,7 +297,7 @@ if __name__ == '__main__':
 
         message_train, kl_coef = train_epoch(epo)
         message_train, kl_coef = train_epoch(epo)
-        message_val, MAPE_val, RMSE_val = val_epoch(epo, kl_coef)
+        message_val, MAPE_val, RMSE_val,MAE_val = val_epoch(epo, kl_coef)
 
 
 
@@ -277,9 +312,9 @@ if __name__ == '__main__':
             test_res= test_data_social(model, args.pred_length, args.condition_length, dataloader,
                                  device=device, args = args, kl_coef=kl_coef)
 
-            message_test = 'Epoch {:04d} [Test seq (cond on sampled tp)] | MAPE {:.6F} | RMSE {:.6F}|'.format(
+            message_test = 'Epoch {:04d} [Test seq (cond on sampled tp)] | MAPE {:.6F} | RMSE {:.6F}| MAE {:.6F}|'.format(
                 epo,
-                test_res["MAPE"], test_res["RMSE"])
+                test_res["MAPE"], test_res["RMSE"],test_res["MAE"])
 
 
             if MAPE_val < best_val_MAPE:
@@ -301,8 +336,9 @@ if __name__ == '__main__':
             if test_res["MAPE"] < best_test_MAPE:
                 best_test_MAPE = test_res["MAPE"]
                 best_test_RMSE = test_res["RMSE"]
-                message_best = 'Epoch {:04d} [Test seq (cond on sampled tp)] | Best Test MAPE {:.6f}|Best Test RMSE {:.6f}|'.format(epo,
-                                                                                                        best_test_MAPE,best_test_RMSE)
+                best_test_MAE  = test_res["MAE"]
+                message_best = 'Epoch {:04d} [Test seq (cond on sampled tp)] | Best Test MAPE {:.6f}|Best Test RMSE {:.6f}|Best Test MAE {:.6f}|'.format(epo,
+                                                                                                        best_test_MAPE,best_test_RMSE,best_test_MAE)
 
                 logger.info(message_best)
                 ckpt_path = os.path.join(args.save, "experiment_" + str(

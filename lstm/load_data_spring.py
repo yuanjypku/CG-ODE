@@ -14,8 +14,6 @@ from torch.nn.utils.rnn import pad_sequence
 from warnings import warn
 
 
-
-
 class ParseData(object):
 
     def __init__(self,args):
@@ -43,8 +41,6 @@ class ParseData(object):
         locs = np.load(self.args.datapath + self.args.dataset + '/loc_train_springs5.npy',allow_pickle=True) # [K,N,T,2]
         vels = np.load(self.args.datapath + self.args.dataset + '/vel_train_springs5.npy',allow_pickle=True) # [K,N,T,2]
 
-        graphs = np.load(self.args.datapath + self.args.dataset + '/edges_train_springs5.npy')  # [K,N,N]
-
         
         # Graph Preprocessing: remain self-loop and take log
 
@@ -53,27 +49,23 @@ class ParseData(object):
         # features normalize
         features = self.feature_norm(features)
 
-        graphs = repeat(graphs, 'K N n -> K T N n', T=features.shape[-2]) # [K,T,N,N]
-
         self.num_states = features.shape[1]
         self.num_features = features.shape[-1]
         if is_train:
             features = features[:-5, :, :, :]
-            graphs = graphs[:-5, :, :, :]
             features_original = features_original[:-5,:,:,:]
         else:
             features = features[-5:, :, :, :]
-            graphs = graphs[-5:, :, :, :]
             features_original = features_original[-5:,:,:,:]
 
         
-        encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states = self.generate_train_val_dataloader(features,graphs,features_original)
+        encoder_data_loader, decoder_data_loader, num_batch, self.num_states = self.generate_train_val_dataloader(features,features_original)
 
 
 
-        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states
+        return encoder_data_loader, decoder_data_loader,  num_batch, self.num_states
     
-    def generate_train_val_dataloader(self,features,graphs,features_original):
+    def generate_train_val_dataloader(self,features,features_original):
         # Split data for encoder and decoder dataloader
         feature_observed, times_observed, series_decoder, times_extrap = self.split_data(
             features)  # series_decoder[K*N,T2,D]
@@ -83,7 +75,7 @@ class ParseData(object):
         _,_,series_decoder_gt,_ = self.split_data(features_original)
 
         # Generate Encoder data
-        encoder_data_loader = self.transfer_data(feature_observed, graphs, times_observed, self.batch_size)
+        encoder_data_loader = self.transfer_data(feature_observed, times_observed, self.batch_size)
 
         # Generate Decoder Data and Graph
 
@@ -94,18 +86,14 @@ class ParseData(object):
                                     collate_fn=lambda batch: self.variable_time_collate_fn_activity(
                                         batch))  # num_graph*num_ball [tt,vals,masks]
 
-        graph_decoder = graphs[:, self.args.condition_length:, :, :]  # [K,T2,N,N]
-        decoder_graph_loader = Loader(graph_decoder, batch_size=self.batch_size, shuffle=False)
 
         num_batch = len(decoder_data_loader)
-        assert len(decoder_data_loader) == len(decoder_graph_loader)
 
         # Inf-Generator
         encoder_data_loader = utils.inf_generator(encoder_data_loader)
-        decoder_graph_loader = utils.inf_generator(decoder_graph_loader)
         decoder_data_loader = utils.inf_generator(decoder_data_loader)
 
-        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states
+        return encoder_data_loader, decoder_data_loader, num_batch, self.num_states
 
 
     def load_test_data(self,pred_length,condition_length):
@@ -135,7 +123,7 @@ class ParseData(object):
         times_observed = times[:condition_length]  # [T1]
         self.times_extrap = times[condition_length:] - times[condition_length]  # [T2] making starting time of T2 be 0.
 
-        encoder_data_loader = self.transfer_data(features_enc, graphs_enc, times_observed,1)
+        encoder_data_loader = self.transfer_data(features_enc, times_observed,1)
 
 
         # Decoder data
@@ -153,18 +141,16 @@ class ParseData(object):
             masks_each = np.asarray([i for i in range(pred_length)])
             features_masks_dec.append((features_each,features_each_origin, masks_each))
 
-        decoder_graph_loader = Loader(graphs_dec, batch_size=1, shuffle=False)
         decoder_data_loader = Loader(features_masks_dec, batch_size=1, shuffle=False,
                                      collate_fn=lambda batch: self.variable_test(batch))
 
         # Inf-Generator
         encoder_data_loader = utils.inf_generator(encoder_data_loader)
-        decoder_graph_loader = utils.inf_generator(decoder_graph_loader)
         decoder_data_loader = utils.inf_generator(decoder_data_loader)
 
         num_batch = features.shape[0]
 
-        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch
+        return encoder_data_loader, decoder_data_loader, num_batch
 
     def split_data(self, feature):
         '''
@@ -187,27 +173,12 @@ class ParseData(object):
 
         return feature_observed, times_observed, series_decoder, times_extrap
 
-    def transfer_data(self, feature, edges, times,batch_size):
+    def transfer_data(self, feature, times,batch_size):
         '''
         :param feature: #[K,N,T1,D]
-        :param edges: #[K,T,N,N], with self-loop
-        :param times: #[T1]
-        :param time_begin: 1
-        :return:
         '''
-        data_list = []
-        edge_size_list = []
-
-        num_samples = feature.shape[0]
-
-        for i in tqdm(range(num_samples)):
-            data_per_graph, edge_size = self.transfer_one_graph(feature[i], edges[i], times)
-            data_list.append(data_per_graph)
-            edge_size_list.append(edge_size)
-
-        print("average number of edges per graph is %.4f" % np.mean(np.asarray(edge_size_list)))
-        data_loader = DataLoader(data_list, batch_size=batch_size,shuffle=False)
-
+        data_list = [i for i in feature]
+        data_loader = Loader(data_list, batch_size=batch_size, shuffle=False)
         return data_loader
 
     def transfer_one_graph(self,feature, edge, time):

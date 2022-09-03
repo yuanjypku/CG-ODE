@@ -1,0 +1,220 @@
+/nvme/yuanjingyang/CG-ODE/run_models_social.py
+run_models_social.py --solver dopri5 --rtol 1e-3 --atol 1e-5 --pred_length 40 --condition_length 80
+Namespace(save='experiments/', load=None, dataset='social', datapath='data/', pred_length=40, condition_length=80, training_end_time=320, add_popularity=True, features_inc=True, split_interval=5, niters=50, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=30, rec_layers=1, gen_layers=1, encoder='base', graf_layer=1, cheb_K=2, heavyBall=False, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1, augment_dim=0, solver='dopri5', rtol=0.001, atol=1e-05, alias='run', feature_out_index=[0, 1], output_dim=2, num_atoms=80)
+run
+Experiment 08-23_17:43
+Epoch 0001 [Train seq (cond on sampled tp)] | Loss 139.470820 | MAPE 1.243141 | RMSE 0.547016 | Likelihood -137.704519 | KL fp 1.7663 | FP STD 0.1239 | ->nfe  454.40 | <-nfe 1782.00
+Epoch 0001 [Val seq (cond on sampled tp)] |  MAPE 0.096689 | RMSE 0.493164 |
+Best Val!
+Epoch 0001 [Test seq (cond on sampled tp)] | MAPE 0.944889 | RMSE 0.757661|
+Epoch 0001 [Test seq (cond on sampled tp)] | Best Test MAPE 0.944889|Best Test RMSE 0.757661|
+Experiment 08-23_17:43
+Epoch 0002 [Train seq (cond on sampled tp)] | Loss 137.339325 | MAPE 0.400244 | RMSE 0.391352 | Likelihood -136.678051 | KL fp 0.6613 | FP STD 0.3562 | ->nfe  310.40 | <-nfe 1735.20
+Epoch 0002 [Val seq (cond on sampled tp)] |  MAPE 0.077979 | RMSE 0.409189 |
+Best Val!
+Epoch 0002 [Test seq (cond on sampled tp)] | MAPE 0.667805 | RMSE 0.658973|
+Epoch 0002 [Test seq (cond on sampled tp)] | Best Test MAPE 0.667805|Best Test RMSE 0.658973|
+Experiment 08-23_17:43
+Epoch 0003 [Train seq (cond on sampled tp)] | Loss 136.084306 | MAPE 0.334676 | RMSE 0.326141 | Likelihood -135.734300 | KL fp 0.3500 | FP STD 0.6423 | ->nfe  249.20 | <-nfe 1462.80
+Epoch 0003 [Val seq (cond on sampled tp)] |  MAPE 0.055900 | RMSE 0.346668 |
+Best Val!
+Epoch 0003 [Test seq (cond on sampled tp)] | MAPE 0.621829 | RMSE 0.544397|
+Epoch 0003 [Test seq (cond on sampled tp)] | Best Test MAPE 0.621829|Best Test RMSE 0.544397|
+Experiment 08-23_17:43
+Epoch 0004 [Train seq (cond on sampled tp)] | Loss 134.850751 | MAPE 0.294937 | RMSE 0.322394 | Likelihood -134.467886 | KL fp 0.3829 | FP STD 0.6914 | ->nfe  281.60 | <-nfe 1519.20
+Epoch 0004 [Val seq (cond on sampled tp)] |  MAPE 0.061178 | RMSE 0.351785 |
+Epoch 0004 [Test seq (cond on sampled tp)] | MAPE 0.513394 | RMSE 0.495217|
+Epoch 0004 [Test seq (cond on sampled tp)] | Best Test MAPE 0.513394|Best Test RMSE 0.495217|
+Experiment 08-23_17:43
+Epoch 0005 [Train seq (cond on sampled tp)] | Loss 133.633228 | MAPE 0.228078 | RMSE 0.308960 | Likelihood -133.165865 | KL fp 0.4674 | FP STD 0.6732 | ->nfe  303.20 | <-nfe 1696.80
+Epoch 0005 [Val seq (cond on sampled tp)] |  MAPE 0.053817 | RMSE 0.327400 |
+Best Val!
+Epoch 0005 [Test seq (cond on sampled tp)] | MAPE 0.607112 | RMSE 0.517222|
+Experiment 08-23_17:43
+Epoch 0006 [Train seq (cond on sampled tp)] | Loss 148.658130 | MAPE 0.262085 | RMSE 0.307702 | Likelihood -147.865753 | KL fp 0.7924 | FP STD 0.6916 | ->nfe  285.20 | <-nfe 1803.60
+Epoch 0006 [Val seq (cond on sampled tp)] |  MAPE 0.055753 | RMSE 0.336031 |
+Epoch 0006 [Test seq (cond on sampled tp)] | MAPE 0.674190 | RMSE 0.550372|
+Experiment 08-23_17:43
+Epoch 0007 [Train seq (cond on sampled tp)] | Loss 132.115942 | MAPE 0.276423 | RMSE 0.308334 | Likelihood -131.100838 | KL fp 1.0151 | FP STD 0.3585 | ->nfe  309.20 | <-nfe 1605.60
+Epoch 0007 [Val seq (cond on sampled tp)] |  MAPE 0.055307 | RMSE 0.334646 |
+Epoch 0007 [Test seq (cond on sampled tp)] | MAPE 0.662784 | RMSE 0.543343|
+Experiment 08-23_17:43
+Epoch 0008 [Train seq (cond on sampled tp)] | Loss 133.040343 | MAPE 0.259345 | RMSE 0.306848 | Likelihood -132.013469 | KL fp 1.0269 | FP STD 0.4031 | ->nfe  285.20 | <-nfe 1591.20
+Epoch 0008 [Val seq (cond on sampled tp)] |  MAPE 0.053038 | RMSE 0.328731 |
+Best Val!
+Epoch 0008 [Test seq (cond on sampled tp)] | MAPE 0.623125 | RMSE 0.523443|
+Experiment 08-23_17:43
+Epoch 0009 [Train seq (cond on sampled tp)] | Loss 134.840443 | MAPE 0.235958 | RMSE 0.306057 | Likelihood -133.571678 | KL fp 1.2688 | FP STD 0.3463 | ->nfe  362.00 | <-nfe 1856.40
+Epoch 0009 [Val seq (cond on sampled tp)] |  MAPE 0.053281 | RMSE 0.327622 |
+Epoch 0009 [Test seq (cond on sampled tp)] | MAPE 0.608207 | RMSE 0.516647|
+Experiment 08-23_17:43
+Epoch 0010 [Train seq (cond on sampled tp)] | Loss 130.834358 | MAPE 0.235383 | RMSE 0.305818 | Likelihood -129.421078 | KL fp 1.4133 | FP STD 0.2911 | ->nfe  506.00 | <-nfe 2037.60
+Epoch 0010 [Val seq (cond on sampled tp)] |  MAPE 0.053084 | RMSE 0.328388 |
+Epoch 0010 [Test seq (cond on sampled tp)] | MAPE 0.625088 | RMSE 0.522506|
+Experiment 08-23_17:43
+Epoch 0011 [Train seq (cond on sampled tp)] | Loss 119.566970 | MAPE 0.245654 | RMSE 0.305819 | Likelihood -117.961277 | KL fp 1.6057 | FP STD 0.2874 | ->nfe  615.20 | <-nfe 2222.40
+Epoch 0011 [Val seq (cond on sampled tp)] |  MAPE 0.053241 | RMSE 0.329517 |
+Epoch 0011 [Test seq (cond on sampled tp)] | MAPE 0.630975 | RMSE 0.528355|
+Experiment 08-23_17:43
+Epoch 0012 [Train seq (cond on sampled tp)] | Loss 116.633500 | MAPE 0.246557 | RMSE 0.305959 | Likelihood -115.125893 | KL fp 1.5076 | FP STD 0.2442 | ->nfe  738.80 | <-nfe 2348.40
+Epoch 0012 [Val seq (cond on sampled tp)] |  MAPE 0.052947 | RMSE 0.328543 |
+Best Val!
+Epoch 0012 [Test seq (cond on sampled tp)] | MAPE 0.624202 | RMSE 0.523889|
+Experiment 08-23_17:43
+Epoch 0013 [Train seq (cond on sampled tp)] | Loss 129.877610 | MAPE 0.240812 | RMSE 0.305815 | Likelihood -128.103771 | KL fp 1.7738 | FP STD 0.2467 | ->nfe  958.40 | <-nfe 2535.60
+Epoch 0013 [Val seq (cond on sampled tp)] |  MAPE 0.053046 | RMSE 0.328608 |
+Epoch 0013 [Test seq (cond on sampled tp)] | MAPE 0.626797 | RMSE 0.524471|
+Experiment 08-23_17:43
+Epoch 0014 [Train seq (cond on sampled tp)] | Loss 112.327646 | MAPE 0.244503 | RMSE 0.305632 | Likelihood -110.728681 | KL fp 1.5990 | FP STD 0.2380 | ->nfe  960.80 | <-nfe 2515.20
+Epoch 0014 [Val seq (cond on sampled tp)] |  MAPE 0.053599 | RMSE 0.331289 |
+Epoch 0014 [Test seq (cond on sampled tp)] | MAPE 0.639214 | RMSE 0.535025|
+Experiment 08-23_17:43
+Epoch 0015 [Train seq (cond on sampled tp)] | Loss 119.863793 | MAPE 0.254806 | RMSE 0.306750 | Likelihood -118.245970 | KL fp 1.6178 | FP STD 0.2006 | ->nfe 1025.60 | <-nfe 2545.20
+Epoch 0015 [Val seq (cond on sampled tp)] |  MAPE 0.052981 | RMSE 0.328453 |
+Epoch 0015 [Test seq (cond on sampled tp)] | MAPE 0.638445 | RMSE 0.532172|
+Experiment 08-23_17:43
+Epoch 0016 [Train seq (cond on sampled tp)] | Loss 124.371213 | MAPE 0.240031 | RMSE 0.306635 | Likelihood -122.454650 | KL fp 1.9166 | FP STD 0.2314 | ->nfe 1163.60 | <-nfe 2688.00
+Epoch 0016 [Val seq (cond on sampled tp)] |  MAPE 0.053215 | RMSE 0.326106 |
+Epoch 0016 [Test seq (cond on sampled tp)] | MAPE 0.616339 | RMSE 0.517754|
+Experiment 08-23_17:43
+Epoch 0017 [Train seq (cond on sampled tp)] | Loss 108.386878 | MAPE 0.228947 | RMSE 0.303881 | Likelihood -106.490913 | KL fp 1.8960 | FP STD 0.1914 | ->nfe 1242.80 | <-nfe 2764.80
+Epoch 0017 [Val seq (cond on sampled tp)] |  MAPE 0.053209 | RMSE 0.323380 |
+Epoch 0017 [Test seq (cond on sampled tp)] | MAPE 0.610395 | RMSE 0.523938|
+Experiment 08-23_17:43
+Epoch 0018 [Train seq (cond on sampled tp)] | Loss 106.908680 | MAPE 0.249700 | RMSE 0.301227 | Likelihood -104.874890 | KL fp 2.0338 | FP STD 0.2005 | ->nfe 1408.40 | <-nfe 2856.00
+Epoch 0018 [Val seq (cond on sampled tp)] |  MAPE 0.054188 | RMSE 0.328067 |
+Epoch 0018 [Test seq (cond on sampled tp)] | MAPE 0.630730 | RMSE 0.533906|
+Experiment 08-23_17:43
+Epoch 0019 [Train seq (cond on sampled tp)] | Loss 108.206468 | MAPE 0.302758 | RMSE 0.299102 | Likelihood -106.418082 | KL fp 1.7884 | FP STD 0.2187 | ->nfe 1424.00 | <-nfe 2958.00
+Epoch 0019 [Val seq (cond on sampled tp)] |  MAPE 0.055976 | RMSE 0.321143 |
+Epoch 0019 [Test seq (cond on sampled tp)] | MAPE 0.603713 | RMSE 0.527134|
+Experiment 08-23_17:43
+Epoch 0020 [Train seq (cond on sampled tp)] | Loss 102.657383 | MAPE 0.269644 | RMSE 0.305810 | Likelihood -100.897065 | KL fp 1.7603 | FP STD 0.2435 | ->nfe 1458.80 | <-nfe 3022.80
+Epoch 0020 [Val seq (cond on sampled tp)] |  MAPE 0.055575 | RMSE 0.338871 |
+Epoch 0020 [Test seq (cond on sampled tp)] | MAPE 0.607228 | RMSE 0.528541|
+Experiment 08-23_17:43
+Epoch 0021 [Train seq (cond on sampled tp)] | Loss 108.414240 | MAPE 0.278926 | RMSE 0.309881 | Likelihood -106.734261 | KL fp 1.6800 | FP STD 0.2331 | ->nfe 1539.20 | <-nfe 3111.60
+Epoch 0021 [Val seq (cond on sampled tp)] |  MAPE 0.058350 | RMSE 0.327557 |
+Epoch 0021 [Test seq (cond on sampled tp)] | MAPE 0.588354 | RMSE 0.530056|
+Experiment 08-23_17:43
+Epoch 0022 [Train seq (cond on sampled tp)] | Loss 102.688568 | MAPE 0.313375 | RMSE 0.314605 | Likelihood -100.952899 | KL fp 1.7357 | FP STD 0.2839 | ->nfe 1606.40 | <-nfe 3140.40
+Epoch 0022 [Val seq (cond on sampled tp)] |  MAPE 0.059433 | RMSE 0.356932 |
+Epoch 0022 [Test seq (cond on sampled tp)] | MAPE 0.621317 | RMSE 0.554008|
+Experiment 08-23_17:43
+Epoch 0023 [Train seq (cond on sampled tp)] | Loss 101.018955 | MAPE 0.296213 | RMSE 0.299402 | Likelihood -99.537761 | KL fp 1.4812 | FP STD 0.2964 | ->nfe 1636.40 | <-nfe 3181.20
+Epoch 0023 [Val seq (cond on sampled tp)] |  MAPE 0.055177 | RMSE 0.319023 |
+Epoch 0023 [Test seq (cond on sampled tp)] | MAPE 0.597587 | RMSE 0.515599|
+Experiment 08-23_17:43
+Epoch 0024 [Train seq (cond on sampled tp)] | Loss 99.980648 | MAPE 0.277482 | RMSE 0.294608 | Likelihood -98.318068 | KL fp 1.6626 | FP STD 0.2971 | ->nfe 1692.80 | <-nfe 3247.20
+Epoch 0024 [Val seq (cond on sampled tp)] |  MAPE 0.056092 | RMSE 0.318499 |
+Epoch 0024 [Test seq (cond on sampled tp)] | MAPE 0.596909 | RMSE 0.524967|
+Experiment 08-23_17:43
+Epoch 0025 [Train seq (cond on sampled tp)] | Loss 97.633555 | MAPE 0.280538 | RMSE 0.293066 | Likelihood -95.871622 | KL fp 1.7619 | FP STD 0.2786 | ->nfe 1685.60 | <-nfe 3146.40
+Epoch 0025 [Val seq (cond on sampled tp)] |  MAPE 0.054888 | RMSE 0.316273 |
+Epoch 0025 [Test seq (cond on sampled tp)] | MAPE 0.599478 | RMSE 0.505305|
+Experiment 08-23_17:43
+Epoch 0026 [Train seq (cond on sampled tp)] | Loss 96.484592 | MAPE 0.365992 | RMSE 0.294386 | Likelihood -94.727310 | KL fp 1.7573 | FP STD 0.2683 | ->nfe 1689.20 | <-nfe 3141.60
+Epoch 0026 [Val seq (cond on sampled tp)] |  MAPE 0.054353 | RMSE 0.312695 |
+Epoch 0026 [Test seq (cond on sampled tp)] | MAPE 0.593742 | RMSE 0.518651|
+Experiment 08-23_17:43
+Epoch 0027 [Train seq (cond on sampled tp)] | Loss 97.302739 | MAPE 0.296723 | RMSE 0.290574 | Likelihood -95.588524 | KL fp 1.7142 | FP STD 0.2775 | ->nfe 1697.60 | <-nfe 3200.40
+Epoch 0027 [Val seq (cond on sampled tp)] |  MAPE 0.055452 | RMSE 0.310953 |
+Epoch 0027 [Test seq (cond on sampled tp)] | MAPE 0.586828 | RMSE 0.508115|
+Experiment 08-23_17:43
+Epoch 0028 [Train seq (cond on sampled tp)] | Loss 94.967332 | MAPE 0.346189 | RMSE 0.289455 | Likelihood -93.248363 | KL fp 1.7190 | FP STD 0.2995 | ->nfe 1685.60 | <-nfe 3090.00
+Epoch 0028 [Val seq (cond on sampled tp)] |  MAPE 0.055839 | RMSE 0.310573 |
+Epoch 0028 [Test seq (cond on sampled tp)] | MAPE 0.599463 | RMSE 0.506569|
+Experiment 08-23_17:43
+Epoch 0029 [Train seq (cond on sampled tp)] | Loss 93.553039 | MAPE 0.343419 | RMSE 0.285303 | Likelihood -91.926999 | KL fp 1.6260 | FP STD 0.3125 | ->nfe 1694.00 | <-nfe 3100.80
+Epoch 0029 [Val seq (cond on sampled tp)] |  MAPE 0.052777 | RMSE 0.301097 |
+Best Val!
+Epoch 0029 [Test seq (cond on sampled tp)] | MAPE 0.618185 | RMSE 0.516086|
+Experiment 08-23_17:43
+Epoch 0030 [Train seq (cond on sampled tp)] | Loss 96.214231 | MAPE 0.335549 | RMSE 0.286733 | Likelihood -94.865935 | KL fp 1.3483 | FP STD 0.3417 | ->nfe 1683.20 | <-nfe 3108.00
+Epoch 0030 [Val seq (cond on sampled tp)] |  MAPE 0.053730 | RMSE 0.310938 |
+Epoch 0030 [Test seq (cond on sampled tp)] | MAPE 0.615242 | RMSE 0.504732|
+Experiment 08-23_17:43
+Epoch 0031 [Train seq (cond on sampled tp)] | Loss 98.592889 | MAPE 0.289768 | RMSE 0.282605 | Likelihood -97.016448 | KL fp 1.5764 | FP STD 0.3236 | ->nfe 1667.60 | <-nfe 3060.00
+Epoch 0031 [Val seq (cond on sampled tp)] |  MAPE 0.052722 | RMSE 0.288979 |
+Best Val!
+Epoch 0031 [Test seq (cond on sampled tp)] | MAPE 0.557911 | RMSE 0.517893|
+Experiment 08-23_17:43
+Epoch 0032 [Train seq (cond on sampled tp)] | Loss 93.932988 | MAPE 0.330769 | RMSE 0.280930 | Likelihood -92.330232 | KL fp 1.6028 | FP STD 0.2879 | ->nfe 1678.40 | <-nfe 3099.60
+Epoch 0032 [Val seq (cond on sampled tp)] |  MAPE 0.052999 | RMSE 0.302148 |
+Epoch 0032 [Test seq (cond on sampled tp)] | MAPE 0.612391 | RMSE 0.483951|
+Experiment 08-23_17:43
+Epoch 0033 [Train seq (cond on sampled tp)] | Loss 91.731151 | MAPE 0.318920 | RMSE 0.277177 | Likelihood -90.023309 | KL fp 1.7078 | FP STD 0.3176 | ->nfe 1665.20 | <-nfe 3038.40
+Epoch 0033 [Val seq (cond on sampled tp)] |  MAPE 0.052282 | RMSE 0.290320 |
+Best Val!
+Epoch 0033 [Test seq (cond on sampled tp)] | MAPE 0.591769 | RMSE 0.508449|
+Experiment 08-23_17:43
+Epoch 0034 [Train seq (cond on sampled tp)] | Loss 101.440676 | MAPE 0.284825 | RMSE 0.285356 | Likelihood -99.784204 | KL fp 1.6565 | FP STD 0.3367 | ->nfe 1708.40 | <-nfe 3080.40
+Epoch 0034 [Val seq (cond on sampled tp)] |  MAPE 0.053753 | RMSE 0.302028 |
+Epoch 0034 [Test seq (cond on sampled tp)] | MAPE 0.608839 | RMSE 0.469702|
+Experiment 08-23_17:43
+Epoch 0035 [Train seq (cond on sampled tp)] | Loss 90.970350 | MAPE 0.370218 | RMSE 0.276745 | Likelihood -89.370994 | KL fp 1.5994 | FP STD 0.3350 | ->nfe 1706.00 | <-nfe 3112.80
+Epoch 0035 [Val seq (cond on sampled tp)] |  MAPE 0.053541 | RMSE 0.293680 |
+Epoch 0035 [Test seq (cond on sampled tp)] | MAPE 0.585586 | RMSE 0.531631|
+Experiment 08-23_17:43
+Epoch 0036 [Train seq (cond on sampled tp)] | Loss 94.171662 | MAPE 0.267592 | RMSE 0.288219 | Likelihood -92.589757 | KL fp 1.5819 | FP STD 0.3163 | ->nfe 1733.60 | <-nfe 3117.60
+Epoch 0036 [Val seq (cond on sampled tp)] |  MAPE 0.054217 | RMSE 0.295520 |
+Epoch 0036 [Test seq (cond on sampled tp)] | MAPE 0.579735 | RMSE 0.452417|
+Experiment 08-23_17:43
+Epoch 0037 [Train seq (cond on sampled tp)] | Loss 90.867634 | MAPE 0.298607 | RMSE 0.274190 | Likelihood -89.247784 | KL fp 1.6198 | FP STD 0.3231 | ->nfe 1719.20 | <-nfe 3114.00
+Epoch 0037 [Val seq (cond on sampled tp)] |  MAPE 0.055189 | RMSE 0.289731 |
+Epoch 0037 [Test seq (cond on sampled tp)] | MAPE 0.588944 | RMSE 0.521901|
+Experiment 08-23_17:43
+Epoch 0038 [Train seq (cond on sampled tp)] | Loss 91.076396 | MAPE 0.258864 | RMSE 0.276074 | Likelihood -89.621007 | KL fp 1.4554 | FP STD 0.3337 | ->nfe 1688.00 | <-nfe 3051.60
+Epoch 0038 [Val seq (cond on sampled tp)] |  MAPE 0.056915 | RMSE 0.282668 |
+Epoch 0038 [Test seq (cond on sampled tp)] | MAPE 0.544062 | RMSE 0.553140|
+Experiment 08-23_17:43
+Epoch 0039 [Train seq (cond on sampled tp)] | Loss 95.464214 | MAPE 0.303239 | RMSE 0.273340 | Likelihood -93.784521 | KL fp 1.6797 | FP STD 0.3329 | ->nfe 1686.80 | <-nfe 3021.60
+Epoch 0039 [Val seq (cond on sampled tp)] |  MAPE 0.051489 | RMSE 0.284531 |
+Best Val!
+Epoch 0039 [Test seq (cond on sampled tp)] | MAPE 0.632586 | RMSE 0.505295|
+Experiment 08-23_17:43
+Epoch 0040 [Train seq (cond on sampled tp)] | Loss 91.094448 | MAPE 0.262409 | RMSE 0.271691 | Likelihood -89.537297 | KL fp 1.5572 | FP STD 0.3186 | ->nfe 1647.20 | <-nfe 3028.80
+Epoch 0040 [Val seq (cond on sampled tp)] |  MAPE 0.051918 | RMSE 0.281505 |
+Epoch 0040 [Test seq (cond on sampled tp)] | MAPE 0.538960 | RMSE 0.552433|
+Experiment 08-23_17:43
+Epoch 0041 [Train seq (cond on sampled tp)] | Loss 93.450023 | MAPE 0.275557 | RMSE 0.272345 | Likelihood -92.041164 | KL fp 1.4089 | FP STD 0.3392 | ->nfe 1670.00 | <-nfe 3060.00
+Epoch 0041 [Val seq (cond on sampled tp)] |  MAPE 0.056397 | RMSE 0.300449 |
+Epoch 0041 [Test seq (cond on sampled tp)] | MAPE 0.613316 | RMSE 0.551647|
+Experiment 08-23_17:43
+Epoch 0042 [Train seq (cond on sampled tp)] | Loss 98.326005 | MAPE 0.426371 | RMSE 0.300672 | Likelihood -96.818624 | KL fp 1.5074 | FP STD 0.3380 | ->nfe 1690.40 | <-nfe 3034.80
+Epoch 0042 [Val seq (cond on sampled tp)] |  MAPE 0.064427 | RMSE 0.296956 |
+Epoch 0042 [Test seq (cond on sampled tp)] | MAPE 0.534450 | RMSE 0.463823|
+Experiment 08-23_17:43
+Epoch 0043 [Train seq (cond on sampled tp)] | Loss 94.074517 | MAPE 0.306314 | RMSE 0.293398 | Likelihood -92.774233 | KL fp 1.3003 | FP STD 0.3186 | ->nfe 1652.00 | <-nfe 3057.60
+Epoch 0043 [Val seq (cond on sampled tp)] |  MAPE 0.052571 | RMSE 0.292588 |
+Epoch 0043 [Test seq (cond on sampled tp)] | MAPE 0.649430 | RMSE 0.516210|
+Experiment 08-23_17:43
+Epoch 0044 [Train seq (cond on sampled tp)] | Loss 91.485743 | MAPE 0.271416 | RMSE 0.284805 | Likelihood -89.999032 | KL fp 1.4867 | FP STD 0.3226 | ->nfe 1620.80 | <-nfe 2998.80
+Epoch 0044 [Val seq (cond on sampled tp)] |  MAPE 0.051424 | RMSE 0.295057 |
+Best Val!
+Epoch 0044 [Test seq (cond on sampled tp)] | MAPE 0.648153 | RMSE 0.543563|
+Experiment 08-23_17:43
+Epoch 0045 [Train seq (cond on sampled tp)] | Loss 92.735636 | MAPE 0.241459 | RMSE 0.276167 | Likelihood -91.157942 | KL fp 1.5777 | FP STD 0.3215 | ->nfe 1637.60 | <-nfe 3001.20
+Epoch 0045 [Val seq (cond on sampled tp)] |  MAPE 0.051279 | RMSE 0.285618 |
+Best Val!
+Epoch 0045 [Test seq (cond on sampled tp)] | MAPE 0.643902 | RMSE 0.597872|
+Experiment 08-23_17:43
+Epoch 0046 [Train seq (cond on sampled tp)] | Loss 89.593787 | MAPE 0.285841 | RMSE 0.271299 | Likelihood -88.174779 | KL fp 1.4190 | FP STD 0.3631 | ->nfe 1683.20 | <-nfe 3037.20
+Epoch 0046 [Val seq (cond on sampled tp)] |  MAPE 0.052489 | RMSE 0.277788 |
+Epoch 0046 [Test seq (cond on sampled tp)] | MAPE 0.651948 | RMSE 0.595798|
+Experiment 08-23_17:43
+Epoch 0047 [Train seq (cond on sampled tp)] | Loss 91.868274 | MAPE 0.303545 | RMSE 0.274280 | Likelihood -90.458694 | KL fp 1.4096 | FP STD 0.3577 | ->nfe 1677.20 | <-nfe 3025.20
+Epoch 0047 [Val seq (cond on sampled tp)] |  MAPE 0.052182 | RMSE 0.289328 |
+Epoch 0047 [Test seq (cond on sampled tp)] | MAPE 0.634528 | RMSE 0.499221|
+Experiment 08-23_17:43
+Epoch 0048 [Train seq (cond on sampled tp)] | Loss 89.233680 | MAPE 0.295395 | RMSE 0.270748 | Likelihood -87.770564 | KL fp 1.4631 | FP STD 0.3552 | ->nfe 1666.40 | <-nfe 3004.80
+Epoch 0048 [Val seq (cond on sampled tp)] |  MAPE 0.055904 | RMSE 0.274947 |
+Epoch 0048 [Test seq (cond on sampled tp)] | MAPE 0.557591 | RMSE 0.601152|
+Experiment 08-23_17:43
+Epoch 0049 [Train seq (cond on sampled tp)] | Loss 90.118643 | MAPE 0.268593 | RMSE 0.270585 | Likelihood -88.699709 | KL fp 1.4189 | FP STD 0.3468 | ->nfe 1672.40 | <-nfe 3020.40
+Epoch 0049 [Val seq (cond on sampled tp)] |  MAPE 0.055355 | RMSE 0.285972 |
+Epoch 0049 [Test seq (cond on sampled tp)] | MAPE 0.605293 | RMSE 0.523173|
+Experiment 08-23_17:43
+Epoch 0050 [Train seq (cond on sampled tp)] | Loss 91.883351 | MAPE 0.326667 | RMSE 0.271274 | Likelihood -90.367419 | KL fp 1.5159 | FP STD 0.3595 | ->nfe 1662.80 | <-nfe 2986.80
+Epoch 0050 [Val seq (cond on sampled tp)] |  MAPE 0.058984 | RMSE 0.298749 |
+Epoch 0050 [Test seq (cond on sampled tp)] | MAPE 0.533719 | RMSE 0.805377|

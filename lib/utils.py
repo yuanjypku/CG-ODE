@@ -226,10 +226,12 @@ def test_data_covid(model, pred_length, condition_length, dataloader,device,args
 	total["MAPE"] = 0
 	total["RMSE"] = 0
 	total["MSE"] = 0
+	total["MAE"] = 0
 	total["kl_first_p"] = 0
 	total["std_first_p"] = 0
 	MAPE_each = []
 	RMSE_each = []
+	MAE_each = []
 
 	n_test_batches = 0
 
@@ -251,6 +253,8 @@ def test_data_covid(model, pred_length, condition_length, dataloader,device,args
 						var = var.detach().item()
 					if key =="MAPE":
 						MAPE_each.append(var)
+					elif key == "MAE":
+						MAE_each.append(var)
 					elif key == "MSE": # assign value for both MSE and RMSE
 						RMSE_each.append(np.sqrt(var))
 						total["RMSE"] += np.sqrt(var)
@@ -267,7 +271,7 @@ def test_data_covid(model, pred_length, condition_length, dataloader,device,args
 
 
 
-	return total,print_MAPE(MAPE_each),print_MAPE(RMSE_each)
+	return total,print_MAPE(MAPE_each),print_MAPE(RMSE_each),print_MAPE(MAE_each)
 
 def test_data_spring(model, pred_length, condition_length, dataloader,device,args,kl_coef):
 
@@ -298,7 +302,7 @@ def test_data_spring(model, pred_length, condition_length, dataloader,device,arg
 			batch_dict_decoder = get_next_batch_test(decoder, device)
 
 			results = model.compute_all_losses(batch_dict_encoder, batch_dict_decoder, batch_dict_graph, args.num_atoms,
-											   edge_lamda=args.edge_lamda, kl_coef=kl_coef, istest=True,need_agg=False)
+											   edge_lamda=args.edge_lamda, kl_coef=kl_coef, istest=True)
 
 			for key in total.keys():
 				if key in results:
@@ -335,10 +339,12 @@ def test_data_social(model, pred_length, condition_length, dataloader, device, a
 	total["MAPE"] = 0
 	total["RMSE"] = 0
 	total["MSE"] = 0
+	total["MAE"] = 0
 	total["kl_first_p"] = 0
 	total["std_first_p"] = 0
 	MAPE_each = []
 	RMSE_each = []
+	MAE_each = []
 
 	n_test_batches = 0
 
@@ -360,6 +366,8 @@ def test_data_social(model, pred_length, condition_length, dataloader, device, a
 						var = var.detach().item()
 					if key == "MAPE":
 						MAPE_each.append(var)
+					elif key == "MAE":
+						MAE_each.append(var)
 					elif key == "MSE":  # assign value for both MSE and RMSE
 						RMSE_each.append(np.sqrt(var))
 						total["RMSE"] += np.sqrt(var)
@@ -389,7 +397,7 @@ def split_multi_batchGraph(x,edge_weight,edge_index,x_time,edge_time,batch,batch
 	# 获取分边的区间
 	edge_clip = []
 	for i_b in range(num_batch):
-		edge_clip.append(torch.nonzero(edge_index[0] == 1050*i_b)[0])
+		edge_clip.append(torch.nonzero(edge_index[0] == batch.shape[0]/num_batch*i_b)[0]) #8400/8=1050
 	edge_clip.append(-1)
 
 	xs = []

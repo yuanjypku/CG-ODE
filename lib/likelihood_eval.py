@@ -29,7 +29,7 @@ def compute_masked_likelihood(mu, data ,mask ,mu_gt = None, likelihood_func = No
 	if mu_gt != None:
 		log_prob = likelihood_func(mu, data,mu_gt)  # [n_traj, n_timepoints, n_dims]
 	else:
-		log_prob = likelihood_func(mu, data)  # MSE
+		log_prob = likelihood_func(mu, data)  # MSE or MAE
 	if mask != None:
 		log_prob_masked = torch.sum(log_prob * mask, dim=1)  # [n_traj, n_dims]
 		timelength_per_nodes = torch.sum(mask.permute(0, 2, 1), dim=2)  # [n_traj, n_dims]
@@ -64,6 +64,9 @@ def masked_gaussian_log_density(mu, data, obsrv_std, mask=None,temporal_weights=
 def mse(mu,data):
 	return  (mu - data) ** 2
 
+def mae(mu,data):
+	return abs(mu - data)
+
 def mape(mu,data,mu_gt = None):
 	# [M,T,D]
 	if mu_gt == None:
@@ -85,6 +88,8 @@ def compute_loss(mu, data,mu_gt=None, mask=None,method=None):
 
 	if method in ["MSE","RMSE"]:
 		res = compute_masked_likelihood(mu, data, mask,likelihood_func = mse)
+	elif method == 'MAE':
+		res = compute_masked_likelihood(mu, data, mask,likelihood_func = mae)
 	elif method == "MAPE":
 		res = compute_masked_likelihood(mu, data,mask, mu_gt = mu_gt,likelihood_func=mape)
 
