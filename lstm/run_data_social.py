@@ -254,7 +254,7 @@ if __name__=='__main__':
                     total[key] = total[key] / n_test_batches
 
 
-        return total, utils.print_MAPE(MAPE_each), utils.print_MAPE(RMSE_each)
+        return total, utils.print_MAPE(MAPE_each), utils.print_MAPE(RMSE_each), utils.print_MAPE(MAE_each)
 
     # Training and Testing
     for epo in range(1, args.niters +1):
