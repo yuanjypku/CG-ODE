@@ -1,0 +1,4 @@
+/nvme/yuanjingyang/CG-ODE/lstm/run_data_social.py
+/nvme/yuanjingyang/CG-ODE/lstm/run_data_social.py
+Namespace(dataset='social', datapath='data/', pred_length=10, condition_length=20, training_end_time=320, add_popularity=True, features_inc=True, split_interval=5, niters=50, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, alias='run', feature_out_index=[0, 1], output_dim=2, num_atoms=80)
+run

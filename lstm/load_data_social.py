@@ -1,19 +1,13 @@
-from asyncio import all_tasks
 import numpy as np
 import torch
-import copy
 from torch_geometric.data import DataLoader,Data
 from torch.utils.data import DataLoader as Loader
 from tqdm import tqdm
 import math
 from scipy.linalg import block_diag
 import lib.utils as utils
+import copy
 import pandas as pd
-from einops import repeat
-from torch.nn.utils.rnn import pad_sequence
-from warnings import warn
-
-
 
 
 class ParseData(object):
@@ -26,37 +20,44 @@ class ParseData(object):
         self.pred_length = args.pred_length
         self.condition_length = args.condition_length
         self.batch_size = args.batch_size
-        self.test_K = args.test_K
 
         torch.manual_seed(self.random_seed)
         np.random.seed(self.random_seed)
-
+    
     def feature_norm(self, features):
-        one_feature = np.ones_like(features[:,:, 1:, :])  # [K,N,T-1,D]
-        one_feature[:, :, :, :] = features[:, :, 1:, :] - features[:, :, :-1, :]
+        one_feature = np.ones_like(features[:, 1:, :])  # [N,T-1,D]
+        one_feature[:, :, :2] = features[:, 1:, :2] - features[:, :-1, :2]
+        one_feature[:, :, -1] = features[:, 1:, -1]
+
         return one_feature
+
 
     def load_train_data(self,is_train = True):
 
         # Loading Data. N is state number, T is number of days. D is feature number.
 
-        locs = np.load(self.args.datapath + self.args.dataset + '/loc_train_springs5.npy',allow_pickle=True) # [K,N,T,2]
-        vels = np.load(self.args.datapath + self.args.dataset + '/vel_train_springs5.npy',allow_pickle=True) # [K,N,T,2]
+        features = np.load(self.args.datapath + self.args.dataset + '/locations.npy')[1:self.args.training_end_time+1, :,:]  # [T,N,D]
+        features = np.transpose(features, (1, 0, 2))  # [N,T,D]
+        graphs = np.load(self.args.datapath + self.args.dataset + '/graphs.npy')[:self.args.training_end_time - 1, :,:]  # [T,N,N]
+        self.num_states = features.shape[0]
 
-        graphs = np.load(self.args.datapath + self.args.dataset + '/edges_train_springs5.npy')  # [K,N,N]
+        # # Feature Preprocessing:
+        # self.features_max = features.max()  # 8
+        # self.features_min = features.min()  # -10
+        #
+        # # Normalize to [0,1]
+        # features = (features - self.features_min) / (self.features_max - self.features_min)
+        if self.args.add_popularity:
+            features = self.add_popularity(features) # 直接将popularity cat在了第三维
 
-        
-        # Graph Preprocessing: remain self-loop and take log
-
-        features = np.concatenate((locs,vels),axis=-1) # [K,N,T,D=4]
-        features_original = copy.deepcopy(features[:, :, 1:, :])
-        # features normalize
+        features_original = copy.deepcopy(features[:, 1:, :])
+        graphs_original = copy.deepcopy(graphs)
         features = self.feature_norm(features)
 
-        graphs = repeat(graphs, 'K N n -> K T N n', T=features.shape[-2]) # [K,T,N,N]
+        # Split Training Samples
+        features, graphs = self.generateTrainSamples(features, graphs)  # [K = 60,N,T,D], [K,T,N,N]
+        features_original,_ = self.generateTrainSamples(features_original,graphs_original)
 
-        self.num_states = features.shape[1]
-        self.num_features = features.shape[-1]
         if is_train:
             features = features[:-5, :, :, :]
             graphs = graphs[:-5, :, :, :]
@@ -64,67 +65,65 @@ class ParseData(object):
         else:
             features = features[-5:, :, :, :]
             graphs = graphs[-5:, :, :, :]
-            features_original = features_original[-5:,:,:,:]
-
-        
-        encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states = self.generate_train_val_dataloader(features,graphs,features_original)
+            features_original = features_original[-5:, :, :, :]
 
 
+        encoder_data_loader, decoder_data_loader, num_batch = self.generate_train_val_dataloader(features,graphs,features_original)
 
-        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states
-    
-    def generate_train_val_dataloader(self,features,graphs,features_original):
+
+
+        return encoder_data_loader, decoder_data_loader, num_batch,self.num_states
+
+    def generate_train_val_dataloader(self, features, graphs,features_original):
         # Split data for encoder and decoder dataloader
-        feature_observed, times_observed, series_decoder, times_extrap = self.split_data(
-            features)  # series_decoder[K*N,T2,D]
+        feature_observed, times_observed, series_decoder, times_extrap = self.split_data(features)  # series_decoder[K*N,T2,D]
         self.times_extrap = times_extrap
 
         #Generate gt
         _,_,series_decoder_gt,_ = self.split_data(features_original)
+
 
         # Generate Encoder data
         encoder_data_loader = self.transfer_data(feature_observed, graphs, times_observed, self.batch_size)
 
         # Generate Decoder Data and Graph
 
-        series_decoder_all = [(series_decoder[i, :, :], series_decoder_gt[i, :, :]) for i in
-                              range(series_decoder.shape[0])]
-        
-        decoder_data_loader = Loader(series_decoder_all, batch_size=self.batch_size * self.num_states, shuffle=False,
-                                    collate_fn=lambda batch: self.variable_time_collate_fn_activity(
-                                        batch))  # num_graph*num_ball [tt,vals,masks]
+        series_decoder_all = [(series_decoder[i, :, :], series_decoder_gt[i, :, :]) for i in range(series_decoder.shape[0])]
 
-        graph_decoder = graphs[:, self.args.condition_length:, :, :]  # [K,T2,N,N]
-        decoder_graph_loader = Loader(graph_decoder, batch_size=self.batch_size, shuffle=False)
+        decoder_data_loader = Loader(series_decoder_all, batch_size=self.batch_size * self.num_states, shuffle=False,
+                                     collate_fn=lambda batch: self.variable_time_collate_fn_activity(
+                                         batch))  # num_graph*num_ball [tt,vals,masks]
 
         num_batch = len(decoder_data_loader)
-        assert len(decoder_data_loader) == len(decoder_graph_loader)
 
         # Inf-Generator
         encoder_data_loader = utils.inf_generator(encoder_data_loader)
-        decoder_graph_loader = utils.inf_generator(decoder_graph_loader)
         decoder_data_loader = utils.inf_generator(decoder_data_loader)
 
-        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states
+        return encoder_data_loader,decoder_data_loader,num_batch
 
 
     def load_test_data(self,pred_length,condition_length):
 
         # Loading Data. N is state number, T is number of days. D is feature number.
+        print("predicting data at: %s" % self.args.dataset)
+        features = np.load(self.args.datapath + self.args.dataset + '/locations.npy')[self.args.training_end_time - condition_length + 1-1:, :, :]  # [T=93,N,D]
+        features = np.transpose(features, (1, 0, 2))  # [N,T,D]
+        graphs = np.load(self.args.datapath + self.args.dataset + '/graphs.npy')[self.args.training_end_time - condition_length:, :, :]  # [T,N,N]
+        self.num_states = features.shape[0]
 
-        locs = np.load(self.args.datapath + self.args.dataset + '/loc_test_springs5.npy',allow_pickle=True)[:self.test_K] # [K,N,T,2]
-        vels = np.load(self.args.datapath + self.args.dataset + '/vel_test_springs5.npy',allow_pickle=True)[:self.test_K] # [K,N,T,2]
 
-        graphs = np.load(self.args.datapath + self.args.dataset + '/edges_test_springs5.npy')  # [K,N,N]
+        if self.args.add_popularity:
+            features = self.add_popularity(features)
 
-        features = np.concatenate((locs,vels),axis=-1) 
-        features_original = copy.deepcopy(features[:, :, 1:, :])
-        # features normalize
-        features = self.feature_norm(features) # [K,N,T,D=4]
+        features_original = copy.deepcopy(features[:, 1:, :])
+        graphs_original = copy.deepcopy(graphs)
+        features = self.feature_norm(features)
 
-        graphs = repeat(graphs, 'K N n -> K T N n', T=features.shape[-2]) # [K,T,N,N]
 
         # Encoder
+        features, graphs = self.generateTrainSamples(features, graphs)  # [K = 15,N,T,D], [K,T,N,N]
+
         features_enc = features[:, :, :condition_length, :]  # [K,N,T1,D]
         features_enc = features_enc
         graphs_enc = graphs[:,:condition_length,:,:]
@@ -138,9 +137,11 @@ class ParseData(object):
         encoder_data_loader = self.transfer_data(features_enc, graphs_enc, times_observed,1)
 
 
+
         # Decoder data
         features_masks_dec = []  # K*[1,T,D]
         graphs_dec = []  # k*[1,T,N,N]
+        features_original, _ = self.generateTrainSamples(features_original, graphs_original)
 
         for i, each_feature in enumerate(features):
             # decoder data
@@ -153,18 +154,45 @@ class ParseData(object):
             masks_each = np.asarray([i for i in range(pred_length)])
             features_masks_dec.append((features_each,features_each_origin, masks_each))
 
-        decoder_graph_loader = Loader(graphs_dec, batch_size=1, shuffle=False)
         decoder_data_loader = Loader(features_masks_dec, batch_size=1, shuffle=False,
                                      collate_fn=lambda batch: self.variable_test(batch))
 
+
+
+        # Inf-Generator
         # Inf-Generator
         encoder_data_loader = utils.inf_generator(encoder_data_loader)
-        decoder_graph_loader = utils.inf_generator(decoder_graph_loader)
         decoder_data_loader = utils.inf_generator(decoder_data_loader)
 
         num_batch = features.shape[0]
 
-        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch
+        return encoder_data_loader, decoder_data_loader,num_batch
+
+
+
+    def generateTrainSamples(self,features, graphs):
+        '''
+        Split training data into several overlapping series.
+        :param features: [N,T,D]
+        :param graphs: [T,N,N]
+        :param interval: 3
+        :return: transform feature into [K,N,T,D], transform graph into [K,T,N,N]
+        '''
+        interval = self.args.split_interval
+        each_length = self.args.pred_length + self.args.condition_length
+        num_batch = math.floor((features.shape[1] - each_length) / interval) + 1
+        num_states = features.shape[0]
+        num_features = features.shape[2]
+        features_split = np.zeros((num_batch, num_states, each_length, num_features))
+        graphs_split = np.zeros((num_batch, each_length, num_states, num_states))
+        batch_num = 0
+
+        for i in range(0, features.shape[1] - each_length+1, interval):
+            assert i + each_length <= features.shape[1]
+            features_split[batch_num] = features[:, i:i + each_length, :]
+            graphs_split[batch_num] = graphs[i:i + each_length, :, :]
+            batch_num += 1
+        return features_split, graphs_split  # [K,N,T,D], [K,T,N,N]
 
     def split_data(self, feature):
         '''
@@ -173,6 +201,7 @@ class ParseData(object):
                :param data_type:
                :return:
                '''
+
         feature_observed = feature[:, :, :self.args.condition_length, :]
         # select corresponding features
         feature_out_index = self.args.feature_out_index
@@ -189,26 +218,33 @@ class ParseData(object):
 
     def transfer_data(self, feature, edges, times,batch_size):
         '''
+
         :param feature: #[K,N,T1,D]
-        :param edges: #[K,T,N,N], with self-loop
-        :param times: #[T1]
-        :param time_begin: 1
-        :return:
+
         '''
-        data_list = []
-        edge_size_list = []
-
-        num_samples = feature.shape[0]
-
-        for i in tqdm(range(num_samples)):
-            data_per_graph, edge_size = self.transfer_one_graph(feature[i], edges[i], times)
-            data_list.append(data_per_graph)
-            edge_size_list.append(edge_size)
-
-        print("average number of edges per graph is %.4f" % np.mean(np.asarray(edge_size_list)))
-        data_loader = DataLoader(data_list, batch_size=batch_size,shuffle=False)
-
+        data_list = [i for i in feature]
+        data_loader = Loader(data_list, batch_size=batch_size, shuffle=False)
         return data_loader
+
+
+
+    def add_popularity(self, feature_input):
+        '''
+        Adding population data to features [N,T,D]
+        :param feature_input: [N,T,D]
+        :return: feature_output: [N,T,D+1]
+        '''
+        popularity = np.reshape(np.load(self.args.datapath + self.args.dataset + "/popularity.npy").astype("float"),(-1,1))  # [N,1]
+        # normalize
+        # popularity = (popularity - popularity.min())/(popularity.max() - popularity.min())
+        popularity = np.expand_dims(popularity, axis=2)
+        popularity_tensor = np.zeros((feature_input.shape[0], feature_input.shape[1], 1))
+        popularity_tensor += popularity  # [N,T,1]
+        feature_output = np.concatenate([feature_input, popularity_tensor], axis=2)
+
+        return feature_output
+
+
 
     def transfer_one_graph(self,feature, edge, time):
         '''f
@@ -216,6 +252,13 @@ class ParseData(object):
         :param feature: [N,T1,D]
         :param edge: [T,N,N]  (needs to transfer into [T1,N,N] first, already with self-loop)
         :param time: [T1]
+        :param method:
+            1. All -- preserve all cross-time edges
+            2. Forward -- preserve cross-time edges where sender nodes are thosewhose time is smaller
+            3. None -- no cross_time edges are preserved
+        :param is_self_only:
+            1. True: only preserve same-node cross-time edges
+            2. False:
         :return:
             1. x : [N*T1,D]: feature for each node.
             2. edge_index [2,num_edge]: edges including cross-time
@@ -226,6 +269,7 @@ class ParseData(object):
         '''
 
         ########## Getting and setting hyperparameters:
+
         num_states = feature.shape[0]
         T1 = self.args.condition_length
         each_gap = 1/ edge.shape[0]
@@ -267,15 +311,16 @@ class ParseData(object):
 
 
         # Step2: Construct edge_exist_matrix [N*T1,N*T1]: depending on both time and weight.
+        #sender nodes are thosewhose time is smaller (preserve directional crosstime)
         edge_exist_matrix = np.where(
             (edge_time_matrix <= 0) & (abs(edge_time_matrix) <= max_gap) & (edge_weight_matrix != 0),
             edge_exist_matrix, 0)
 
 
+
         edge_weight_matrix = edge_weight_matrix * edge_exist_matrix
         edge_index, edge_weight_attr = utils.convert_sparse(edge_weight_matrix)
-        if np.sum(edge_weight_matrix!=0)==0:
-            warn('No edge in one graph') #at least one edge weight (one edge) exists.
+        assert np.sum(edge_weight_matrix!=0)!=0  #at least one edge weight (one edge) exists.
 
         edge_time_matrix = (edge_time_matrix + 3) * edge_exist_matrix # padding 2 to avoid equal time been seen as not exists.
         _, edge_time_attr = utils.convert_sparse(edge_time_matrix)
@@ -296,7 +341,6 @@ class ParseData(object):
         return graph_data,edge_num
 
 
-
     def variable_time_collate_fn_activity(self,batch):
         """
         Expects a batch of
@@ -313,6 +357,7 @@ class ParseData(object):
 
         combined_vals = torch.FloatTensor(combined_vals) #[M,T2,D]
         combined_vals_true = torch.FloatTensor(combined_vals_true)  # [M,T2,D]
+
 
         combined_tt = torch.FloatTensor(self.times_extrap)
 
@@ -350,3 +395,10 @@ class ParseData(object):
 
             }
         return data_dict
+
+
+
+
+
+
+

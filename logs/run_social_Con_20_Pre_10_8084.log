@@ -1,0 +1,21 @@
+/nvme/yuanjingyang/CG-ODE/run_models_social.py
+/nvme/yuanjingyang/CG-ODE/run_models_social.py
+Namespace(save='experiments/', load=None, dataset='social', datapath='data/', pred_length=10, condition_length=20, training_end_time=320, add_popularity=True, features_inc=True, split_interval=5, niters=50, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=30, rec_layers=1, gen_layers=1, encoder='base', graf_layer=1, cheb_K=2, heavyBall=False, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1, augment_dim=0, solver='rk4', rtol=0.01, atol=0.01, alias='run', feature_out_index=[0, 1], output_dim=2, num_atoms=80)
+run
+Experiment 8084
+Epoch 0001 [Train seq (cond on sampled tp)] | Loss 136.710459 | MAPE 0.243821 | RMSE 0.115737 | Likelihood -135.592393 | KL fp 1.1181 | FP STD 0.2541|
+Epoch 0001 [Val seq (cond on sampled tp)] |  MAPE 0.022765 | RMSE 0.105203 |
+Best Val!
+Epoch 0001 [Test seq (cond on sampled tp)] | MAPE 0.135055 | RMSE 0.153934|
+Epoch 0001 [Test seq (cond on sampled tp)] | Best Test MAPE 0.135055|Best Test RMSE 0.153934|
+Experiment 8084
+Epoch 0002 [Train seq (cond on sampled tp)] | Loss 134.081812 | MAPE 0.175904 | RMSE 0.091748 | Likelihood -133.428747 | KL fp 0.6531 | FP STD 0.4345|
+Epoch 0002 [Val seq (cond on sampled tp)] |  MAPE 0.018816 | RMSE 0.090749 |
+Best Val!
+Epoch 0002 [Test seq (cond on sampled tp)] | MAPE 0.116470 | RMSE 0.137935|
+Epoch 0002 [Test seq (cond on sampled tp)] | Best Test MAPE 0.116470|Best Test RMSE 0.137935|
+Experiment 8084
+Epoch 0003 [Train seq (cond on sampled tp)] | Loss 134.491016 | MAPE 0.134658 | RMSE 0.085719 | Likelihood -133.372184 | KL fp 1.1188 | FP STD 0.3634|
+Epoch 0003 [Val seq (cond on sampled tp)] |  MAPE 0.020371 | RMSE 0.091427 |
+Epoch 0003 [Test seq (cond on sampled tp)] | MAPE 0.110433 | RMSE 0.133313|
+Epoch 0003 [Test seq (cond on sampled tp)] | Best Test MAPE 0.110433|Best Test RMSE 0.133313|

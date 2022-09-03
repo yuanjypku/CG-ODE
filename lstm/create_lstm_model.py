@@ -40,6 +40,10 @@ class Seq2seq(nn.Module):
         mse_node = self.get_loss(
 			batch_dict_decoder["data"], pred_node,
 			mask=None, method='MSE', istest=istest)  # [1]
+
+        mae_node = self.get_loss(
+			batch_dict_decoder["data"], pred_node,
+			mask=None, method='MAE', istest=istest)  # [1]
         
         # loss
         loss = - torch.logsumexp(rec_likelihood,0)
@@ -51,6 +55,7 @@ class Seq2seq(nn.Module):
         results["likelihood"] = torch.mean(rec_likelihood).data.item()
         results["MAPE"] = torch.mean(mape_node).data.item()
         results["MSE"] = torch.mean(mse_node).data.item()
+        results["MAE"] = torch.mean(mae_node).data.item() 
         results["kl_first_p"] =  0
         results["std_first_p"] = 0
 
@@ -130,7 +135,7 @@ class Decoder(nn.Module):
         return output
 
 
-def create_LSTM_model(args, input_dim,device):
+def create_LSTM_model(args, input_dim,output_size,device):
     # TODO:用args来调整hls和nl和T2
     resem_dim = 64
     encoder =  Encoder(input_size=input_dim,
@@ -140,7 +145,7 @@ def create_LSTM_model(args, input_dim,device):
                 dropout=0.2,).to(device)
     
     decoder = Decoder(input_size=resem_dim,
-                output_size=1,
+                output_size=output_size,
                 hidden_layer_size=200,
                 num_layers=5,
                 dropout=0.2,).to(device)

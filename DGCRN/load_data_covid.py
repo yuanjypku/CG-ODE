@@ -6,11 +6,10 @@ from tqdm import tqdm
 import math
 from scipy.linalg import block_diag
 import lib.utils as utils
-import copy
 import pandas as pd
-import argparse
 
 
+weights = [10,1,10,1,1000,1000000,100000]
 
 class ParseData(object):
 
@@ -26,70 +25,60 @@ class ParseData(object):
         torch.manual_seed(self.random_seed)
         np.random.seed(self.random_seed)
 
-    def feature_norm(self, features):
-        one_feature = np.ones_like(features[:, 1:, :])  # [N,T-1,D]
-        one_feature[:, :, :2] = features[:, 1:, :2] - features[:, :-1, :2]
-        one_feature[:, :, -1] = features[:, 1:, -1]
-
-        return one_feature
 
     def load_train_data(self,is_train = True):
 
         # Loading Data. N is state number, T is number of days. D is feature number.
 
-        features = np.load(self.args.datapath + self.args.dataset + '/locations.npy')[1:self.args.training_end_time+1, :,:]  # [T,N,D]
-        features = np.transpose(features, (1, 0, 2))  # [N,T,D]
-        graphs = np.load(self.args.datapath + self.args.dataset + '/graphs.npy')[:self.args.training_end_time - 1, :,:]  # [T,N,N]
+        features = np.load(self.args.datapath + self.args.dataset + '/train.npy')  # [N,T,D]
+        graphs = np.load(self.args.datapath + self.args.dataset + '/graph_train.npy')  # [T,N,N]
         self.num_states = features.shape[0]
 
-        # # Feature Preprocessing:
-        # self.features_max = features.max()  # 8
-        # self.features_min = features.min()  # -10
-        #
-        # # Normalize to [0,1]
-        # features = (features - self.features_min) / (self.features_max - self.features_min)
-        if self.args.add_popularity:
-            features = self.add_popularity(features) # 直接将popularity cat在了第三维
 
-        features_original = copy.deepcopy(features[:, 1:, :])
-        graphs_original = copy.deepcopy(graphs)
-        features = self.feature_norm(features)
+        # Feature Preprocessing: Selection + Null Value + Normalization (take log and use cummulative number)
+        features = self.feature_preprocessing(features,graphs,method='norm_const',is_inc = True) #[N,T,D]
+        self.num_features = features.shape[2]
+
+
+        # Graph Preprocessing: remain self-loop and take log
+        graphs = self.graph_preprocessing(graphs,method = 'norm_const', is_self_loop = True)  #[T,N,N]
 
         # Split Training Samples
-        features, graphs = self.generateTrainSamples(features, graphs)  # [K = 60,N,T,D], [K,T,N,N]
-        features_original,_ = self.generateTrainSamples(features_original,graphs_original)
+        features,graphs = self.generateTrainSamples(features,graphs) #[K,N,T,D], [K,T,N,N]
 
         if is_train:
             features = features[:-5, :, :, :]
             graphs = graphs[:-5, :, :, :]
-            features_original = features_original[:-5,:,:,:]
         else:
             features = features[-5:, :, :, :]
             graphs = graphs[-5:, :, :, :]
-            features_original = features_original[-5:, :, :, :]
-
-
-        encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch = self.generate_train_val_dataloader(features,graphs,features_original)
 
 
 
-        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch,self.num_states
+        encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states = self.generate_train_val_dataloader(features,graphs,is_train)
 
-    def generate_train_val_dataloader(self, features, graphs,features_original):
+
+        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states
+
+
+    def generate_train_val_dataloader(self,features,graphs,is_train = True):
         # Split data for encoder and decoder dataloader
-        feature_observed, times_observed, series_decoder, times_extrap = self.split_data(features)  # series_decoder[K*N,T2,D]
+        feature_observed, times_observed, series_decoder, times_extrap = self.split_data(
+            features)  # series_decoder[K*N,T2,D]
         self.times_extrap = times_extrap
-
-        #Generate gt
-        _,_,series_decoder_gt,_ = self.split_data(features_original)
-
 
         # Generate Encoder data
         encoder_data_loader = self.transfer_data(feature_observed, graphs, times_observed, self.batch_size)
 
         # Generate Decoder Data and Graph
+        if is_train:
+            series_decoder_gt = self.decoder_gt_train()  # [K*N,T2,D]
+        else:
+            series_decoder_gt = self.decoder_gt_train()  # [K*N,T2,D]
+            series_decoder_gt = series_decoder_gt[-5*self.num_states:,:,:]
 
-        series_decoder_all = [(series_decoder[i, :, :], series_decoder_gt[i, :, :]) for i in range(series_decoder.shape[0])]
+        series_decoder_all = [(series_decoder[i, :, :], series_decoder_gt[i, :, :]) for i in
+                              range(series_decoder.shape[0])]
 
         decoder_data_loader = Loader(series_decoder_all, batch_size=self.batch_size * self.num_states, shuffle=False,
                                      collate_fn=lambda batch: self.variable_time_collate_fn_activity(
@@ -106,35 +95,51 @@ class ParseData(object):
         decoder_graph_loader = utils.inf_generator(decoder_graph_loader)
         decoder_data_loader = utils.inf_generator(decoder_data_loader)
 
-        return encoder_data_loader,decoder_data_loader,decoder_graph_loader,num_batch
+        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states
+
 
 
     def load_test_data(self,pred_length,condition_length):
 
         # Loading Data. N is state number, T is number of days. D is feature number.
         print("predicting data at: %s" % self.args.dataset)
-        features = np.load(self.args.datapath + self.args.dataset + '/locations.npy')[self.args.training_end_time - condition_length + 1-1:, :, :]  # [T=93,N,D]
-        features = np.transpose(features, (1, 0, 2))  # [N,T,D]
-        graphs = np.load(self.args.datapath + self.args.dataset + '/graphs.npy')[self.args.training_end_time - condition_length:, :, :]  # [T,N,N]
+        features_1 = np.load(self.args.datapath + self.args.dataset + '/train.npy')  # [N,T,D]
+        graphs_1 = np.load(self.args.datapath + self.args.dataset + '/graph_train.npy')  # [T,N,N]
+        features_2 = np.load(self.args.datapath + self.args.dataset + '/test.npy')  # [N,T,D]
+        graphs_2 = np.load(self.args.datapath + self.args.dataset + '/graph_test.npy')  # [T,N,N]
+
+        features = np.concatenate([features_1, features_2], axis=1)
+        graphs = np.concatenate([graphs_1, graphs_2], axis=0)
         self.num_states = features.shape[0]
 
+        # Feature Preprocessing: Selection + Null Value + Normalization (take log and use cummulative number)
+        features = self.feature_preprocessing(features, graphs, method='norm_const',is_inc = True)  # [N,T,D]
+        self.num_features = features.shape[2]
 
-        if self.args.add_popularity:
-            features = self.add_popularity(features)
+        # Graph Preprocessing: remain self-loop and take log
+        graphs = self.graph_preprocessing(graphs, method='norm_const', is_self_loop=True)  # [T,N,N]
 
-        features_original = copy.deepcopy(features[:, 1:, :])
-        graphs_original = copy.deepcopy(graphs)
-        features = self.feature_norm(features)
+        # Generate Encoding data (which is aligned)
+        df = self.loading_test_points(pred_length,condition_length)
+
+        start_indexes = df['start_index'].tolist()
+        end_indexes = df['end_index'].tolist()
+        features_list = []
+        graphs_list = []
+
+        for i, start_index in enumerate(start_indexes):
+            # encoder data are aligned:
+            encoder_data = np.expand_dims(features[:, start_index:start_index + condition_length, :],
+                                          axis=0)  # [1,N,T1,D]
+            features_list.append(encoder_data)
+            graph_data = np.expand_dims(graphs[start_index:start_index + condition_length, :, :], axis=0)  # [1,T1,N,N]
+            graphs_list.append(graph_data)
+
+        features_enc = np.concatenate(features_list, axis=0) #[K,N,T,D]
+        graphs_enc = np.concatenate(graphs_list, axis=0) #[K,T,N,N]
 
 
-        # Encoder
-        features, graphs = self.generateTrainSamples(features, graphs)  # [K = 15,N,T,D], [K,T,N,N]
-
-        features_enc = features[:, :, :condition_length, :]  # [K,N,T1,D]
-        features_enc = features_enc
-        graphs_enc = graphs[:,:condition_length,:,:]
-
-        times_pred_max = pred_length
+        times_pred_max = max(df['pred_length'].tolist())
         times = np.asarray([i / (times_pred_max + condition_length) for i in
                             range(times_pred_max + condition_length)])  # normalized in [0,1] T
         times_observed = times[:condition_length]  # [T1]
@@ -142,27 +147,34 @@ class ParseData(object):
 
         encoder_data_loader = self.transfer_data(features_enc, graphs_enc, times_observed,1)
 
-
-
         # Decoder data
         features_masks_dec = []  # K*[1,T,D]
         graphs_dec = []  # k*[1,T,N,N]
-        features_original, _ = self.generateTrainSamples(features_original, graphs_original)
 
-        for i, each_feature in enumerate(features):
+        # Reloading data for gt
+        features_1 = np.load(self.args.datapath + self.args.dataset + '/train.npy')  # [N,T,D]
+        graphs_1 = np.load(self.args.datapath + self.args.dataset + '/graph_train.npy')  # [T,N,N]
+        features_2 = np.load(self.args.datapath + self.args.dataset + '/test.npy')  # [N,T,D]
+        graphs_2 = np.load(self.args.datapath + self.args.dataset + '/graph_test.npy')  # [T,N,N]
+
+        features_origin = np.concatenate([features_1, features_2], axis=1)
+        graphs_origin = np.concatenate([graphs_1, graphs_2], axis=0)
+        features_origin = self.feature_preprocessing(features_origin, graphs_origin, method='norm_const', is_inc=False)  # [N,T,D]
+
+        for i, start_index in enumerate(start_indexes):
             # decoder data
-            features_each = each_feature[:,condition_length:,self.args.feature_out_index]  # [N,T2,D]
-            tmp = features_original[i]
-            features_each_origin = tmp[:, condition_length:, self.args.feature_out_index]  # [N,T2,D]
-
-            graph_each = graphs[i,condition_length:, :, :] # [T2,N,N]
+            test_start_index = start_index + condition_length
+            end_index = end_indexes[i]
+            features_each = features[:, test_start_index:end_index+1, self.args.feature_out_index]  # [N,T2,D]
+            features_each_origin = features_origin[:, test_start_index:end_index+1, self.args.feature_out_index]  # [N,T2,D]
+            graph_each = graphs[test_start_index:end_index+1, :, :] # [T2,N,N]
             graphs_dec.append(torch.FloatTensor(graph_each))  # K*[T=1,N,N]
-            masks_each = np.asarray([i for i in range(pred_length)])
+            masks_each = np.asarray([i for i in range(end_index - test_start_index+1)])
             features_masks_dec.append((features_each,features_each_origin, masks_each))
 
         decoder_graph_loader = Loader(graphs_dec, batch_size=1, shuffle=False)
         decoder_data_loader = Loader(features_masks_dec, batch_size=1, shuffle=False,
-                                     collate_fn=lambda batch: self.variable_test(batch))
+                                     collate_fn=lambda batch: self.variable_test(batch))  #
 
 
 
@@ -172,11 +184,76 @@ class ParseData(object):
         decoder_graph_loader = utils.inf_generator(decoder_graph_loader)
         decoder_data_loader = utils.inf_generator(decoder_data_loader)
 
-        num_batch = features.shape[0]
+        num_batch = len(start_indexes)
 
         return encoder_data_loader, decoder_data_loader, decoder_graph_loader,num_batch
 
+    def feature_preprocessing(self, feature_input, graph_input, method ='norm_const',is_inc=True):
+        '''
+        Step1: Feature adding and selection.
+        Step2: Null value preprocess
+        Step3: Feature Normalization
+        '''
+        #Step1: Feature adding and selection.
+        feature_names = self.args.features.split(",")
+        self.feature_names = feature_names
+        assert len(weights) == len(feature_names)
+        #print("Selected features are: " + self.args.features)
+        if "Population" in feature_names:
+            feature_input = self.add_population(feature_input)
+        if "Mobility" in feature_names:
+            feature_input = self.add_mobility(graph_input,self.num_states,feature_input)
 
+        # load feature dict to do feature selection
+        f = open(self.args.datapath + "feature_dict.txt", 'r')
+        tmp = f.read()
+        feature_dict = eval(tmp)
+        f.close()
+
+        feature_indices = []
+        for each_feature in feature_names:
+            feature_indices.append(feature_dict[each_feature])
+
+        feature_input = feature_input[:, :, feature_indices]
+
+        #Step2: Null value preprocess
+        feature_input = np.where(feature_input <= -1, 0, feature_input)
+
+        #Step3: Feature Normalization
+        feature_input = np.where(feature_input <= -1, 0, feature_input)
+
+        for i,each_feature in enumerate(feature_names):
+            if each_feature in ["Confirmed", "Deaths", "Recovered", "Active"]:
+                feature_input[:, :, i] = self.feature_normalization(feature_input, i, method=method, is_inc=is_inc)
+            elif each_feature!="Mortality_Rate": #Mortality keep original
+                feature_input[:,:,i] = self.feature_normalization(feature_input,i,method=method,is_inc=False)
+
+
+
+        return feature_input
+
+    def graph_preprocessing(self,graph_input, method = 'norm_const', is_self_loop = True):
+        '''
+                :param graph_input: [T,N,N]
+                :param method: norm--norm by rows: G[i,j] is the outflow from i to j.
+                :param is_self_loop: True to remain self-loop, otherwise no self-loop
+                :return: [T,N,N]
+                '''
+        if not is_self_loop:
+            num_days = graph_input.shape[0]
+            num_states = graph_input.shape[1]
+            graph_output = np.ones_like(graph_input)
+            for i in range(num_days):
+                graph_output[i] = graph_input[i] * (1 - np.identity(num_states))
+        else:
+            graph_output = graph_input
+
+        if method == "log":
+            graph_output = np.log(graph_output + 1)  # 0 remains 0
+        elif method == "norm_const":
+            graph_output = graph_output/weights[-1]
+
+        return graph_output
 
     def generateTrainSamples(self,features, graphs):
         '''
@@ -248,25 +325,60 @@ class ParseData(object):
 
         return data_loader
 
+    def add_mobility(self,graph_input, num_states,feature_input):
+        '''
+        Adding self-loop mobility data from graph to features [N,T,D]
+        :param graph_input: [T,N,N]
+        :param num_states: [N,T,D]
+        :param feature_input: [N,T,D]
+        :return: feature_output: [N,T,D+1]
+        '''
+        num_days = graph_input.shape[0]
+        mobility_matrix = np.zeros((num_states, num_days, 1))
+        for i in range(num_days):
+            for j in range(num_states):
+                mobility_matrix[j, i, 0] = graph_input[i, j, j]
+        feature_output = np.concatenate([feature_input, mobility_matrix], axis=2)
+        return feature_output
 
-
-    def add_popularity(self, feature_input):
+    def add_population(self, feature_input):
         '''
         Adding population data to features [N,T,D]
         :param feature_input: [N,T,D]
         :return: feature_output: [N,T,D+1]
         '''
-        popularity = np.reshape(np.load(self.args.datapath + self.args.dataset + "/popularity.npy").astype("float"),(-1,1))  # [N,1]
-        # normalize
-        # popularity = (popularity - popularity.min())/(popularity.max() - popularity.min())
-        popularity = np.expand_dims(popularity, axis=2)
-        popularity_tensor = np.zeros((feature_input.shape[0], feature_input.shape[1], 1))
-        popularity_tensor += popularity  # [N,T,1]
-        feature_output = np.concatenate([feature_input, popularity_tensor], axis=2)
+        population = np.reshape(np.load(self.args.datapath + "state_info.npy").astype("int"),(-1,1))  # [N,1]
+        population = np.expand_dims(population, axis=2)
+        population_tensor = np.zeros((feature_input.shape[0], feature_input.shape[1], 1))
+        population_tensor += population  # [N,T,1]
+        feature_output = np.concatenate([feature_input, population_tensor], axis=2)
 
         return feature_output
 
+    def feature_normalization(self,features, feature_ID, method='None', is_inc=False):
+        '''
+        normalize one single feature.
+        :param features: [N,T,D]
+        :param feature_ID:
+        :param method:
+        :param is_inc:
+        :return: [N,T]
+        '''
+        # method: log, norm, log_norm, None, norm is to normalize within [1,2]
+        if is_inc:
+            one_feature = np.ones_like(features[:, :, feature_ID])  # [N,T]
+            one_feature[:, 1:] = features[:, 1:, feature_ID] - features[:, :-1, feature_ID]
+        else:
+            one_feature = features[:, :, feature_ID]
 
+        if method == "log":
+            one_feature = np.log(one_feature + 1)
+            return one_feature
+        elif method == 'norm_const':
+            one_feature = one_feature/weights[feature_ID]
+            return one_feature
+        elif method == "None":
+            return one_feature
 
     def transfer_one_graph(self,feature, edge, time):
         '''f
@@ -274,13 +386,6 @@ class ParseData(object):
         :param feature: [N,T1,D]
         :param edge: [T,N,N]  (needs to transfer into [T1,N,N] first, already with self-loop)
         :param time: [T1]
-        :param method:
-            1. All -- preserve all cross-time edges
-            2. Forward -- preserve cross-time edges where sender nodes are thosewhose time is smaller
-            3. None -- no cross_time edges are preserved
-        :param is_self_only:
-            1. True: only preserve same-node cross-time edges
-            2. False:
         :return:
             1. x : [N*T1,D]: feature for each node.
             2. edge_index [2,num_edge]: edges including cross-time
@@ -291,7 +396,6 @@ class ParseData(object):
         '''
 
         ########## Getting and setting hyperparameters:
-
         num_states = feature.shape[0]
         T1 = self.args.condition_length
         each_gap = 1/ edge.shape[0]
@@ -333,11 +437,9 @@ class ParseData(object):
 
 
         # Step2: Construct edge_exist_matrix [N*T1,N*T1]: depending on both time and weight.
-        #sender nodes are thosewhose time is smaller (preserve directional crosstime)
         edge_exist_matrix = np.where(
             (edge_time_matrix <= 0) & (abs(edge_time_matrix) <= max_gap) & (edge_weight_matrix != 0),
             edge_exist_matrix, 0)
-
 
 
         edge_weight_matrix = edge_weight_matrix * edge_exist_matrix
@@ -362,14 +464,10 @@ class ParseData(object):
 
         return graph_data,edge_num
 
-
     def variable_time_collate_fn_activity(self,batch):
         """
         Expects a batch of
             - (feature0,feaure_gt) [K*N, T2, D]
-        Returns:
-            combined_tt: The union of all time observations. [T2]
-            combined_vals: (M, T2, D) tensor containing the observed values.
         """
         # Extract corrsponding deaths or cases
         combined_vals = np.concatenate([np.expand_dims(ex[0],axis=0) for ex in batch],axis=0)
@@ -379,7 +477,6 @@ class ParseData(object):
 
         combined_vals = torch.FloatTensor(combined_vals) #[M,T2,D]
         combined_vals_true = torch.FloatTensor(combined_vals_true)  # [M,T2,D]
-
 
         combined_tt = torch.FloatTensor(self.times_extrap)
 
@@ -398,7 +495,7 @@ class ParseData(object):
             - mask: T
         Returns:
             combined_tt: The union of all time observations. [T2], varies from different testing sample
-            combined_vals: (M, T2, D) tensor containing the observed values.
+            combined_vals: (M, T2, D) tensor containing the gt values.
             combined_masks: index for output timestamps. Only for masking out prediction.
         """
         # Extract corrsponding deaths or cases
@@ -414,13 +511,27 @@ class ParseData(object):
             "time_steps": combined_tt,
             "masks":combined_masks,
             "data_gt": combined_vals_gt,
-
             }
         return data_dict
 
+    def loading_test_points(self,pred_length,condition_length):
+        df = pd.read_csv(self.args.datapath + self.args.dataset + "/test_point.csv", header=0, sep="\t")
+        df_type = df['Pred_Length'].map(lambda x: int(x) == pred_length)
+        df = df[df_type]
+        df['start_index'] = df["Start_date"].map(lambda x: utils.transfer_index(x) - condition_length)
+        df['end_index'] = df["End_date"].map(lambda x: utils.transfer_index(x))
+        df['pred_length'] = df['end_index'] - df['start_index'] - condition_length + 1
 
+        return df
 
+    def decoder_gt_train(self):
 
-
-
-
+        features = np.load(self.args.datapath + self.args.dataset + '/train.npy')  # [N,T,D]
+        graphs = np.load(self.args.datapath + self.args.dataset + '/graph_train.npy')  # [T,N,N]
+        # Feature Preprocessing: Selection + Null Value + Normalization (take log and use cummulative number)
+        features = self.feature_preprocessing(features, graphs, method='norm_const', is_inc=False)  # [N,T,D]
+        # Split Training Samples
+        features, _ = self.generateTrainSamples(features, graphs)  # [K,N,T,D], [K,T,N,N]
+        # Split data for encoder and decoder dataloader
+        _, _, series_decoder, _ = self.split_data(features)  # series_decoder[K*N,T2,D]
+        return series_decoder

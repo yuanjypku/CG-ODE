@@ -1,0 +1,7 @@
+/nvme/yuanjingyang/CG-ODE/run_models_social.py
+run_models_social.py
+Namespace(save='experiments/', load=None, dataset='social', datapath='data/', pred_length=10, condition_length=20, training_end_time=320, add_popularity=True, features_inc=True, split_interval=5, niters=50, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=30, rec_layers=1, gen_layers=1, encoder='base', graf_layer=1, cheb_K=2, heavyBall=False, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1, augment_dim=0, solver='rk4', rtol=0.01, atol=0.01, alias='run', feature_out_index=[0, 1], output_dim=2, num_atoms=80)
+run
+Experiment 09-03_18:37
+Epoch 0001 [Train seq (cond on sampled tp)] | Loss 136.555544 | MAPE 0.241677 | RMSE 0.112015 | MAE 0.073650 | Likelihood -135.685508 | KL fp 0.8700 | FP STD 0.3498 | ->nfe   36.00 | <-nfe   36.00
+Epoch 0001 [Val seq (cond on sampled tp)] |  MAPE 0.018388 | RMSE 0.099041 | MAE 0.243620 |
