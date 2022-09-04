@@ -12,26 +12,26 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 
 from lib import utils
-from load_data import ParseData
+from ode18.load_data_social import ParseData
 from create_ode_model import create_ODE_model
 
 parser = argparse.ArgumentParser('ODE')
 
 
-parser.add_argument('--dataset', type=str, default='Dec', help="Dec")
+parser.add_argument('--dataset', type=str, default='social', help="social")
 parser.add_argument('--datapath', type=str, default='data/', help="default data path")
-parser.add_argument('--pred_length', type=int, default=14, help="Number of days to predict ")
-parser.add_argument('--condition_length', type=int, default=21, help="Number days to condition on")
-parser.add_argument('--features', type=str,
-                    default="Confirmed,Deaths,Recovered,Mortality_Rate,Testing_Rate,Population,Mobility",
-                    help="selected features")
-parser.add_argument('--split_interval', type=int, default=3,
+parser.add_argument('--pred_length', type=int, default=10, help="Number of days to predict ")
+parser.add_argument('--condition_length', type=int, default=20, help="Number days to condition on")
+parser.add_argument('--training_end_time', type=int, default=320,
                     help="number of days between two adjacent starting date of two series.")
-parser.add_argument('--feature_out', type=str, default='Deaths',
-                    help="Confirmed, Deaths, or Confirmed and deaths")
+parser.add_argument('--add_popularity', type=bool, default=True,help="selected features")
+parser.add_argument('--features_inc', type=bool, default=True,help="selected features")
 
 
-parser.add_argument('--niters', type=int, default=100)
+parser.add_argument('--split_interval', type=int, default=5,
+                    help="number of days between two adjacent starting date of two series.")
+
+parser.add_argument('--niters', type=int, default=50)
 parser.add_argument('--lr', type=float, default=5e-3, help="Starting learning rate.")
 parser.add_argument('-b', '--batch-size', type=int, default=8)
 parser.add_argument('-r', '--random-seed', type=int, default=1991, help="Random_seed")
@@ -70,15 +70,8 @@ else:
 	device = torch.device("cpu")
 
 ###########  feature related:
-if args.feature_out == "Confirmed":
-    args.output_dim = 1
-    args.feature_out_index = [0]
-elif args.feature_out == "Deaths":
-    args.output_dim = 1
-    args.feature_out_index = [1]
-else:
-    args.output_dim = 2
-    args.feature_out_index = [0, 1]
+args.feature_out_index = [0,1]
+args.output_dim = 2
 
 
 if __name__=='__main__':
@@ -91,6 +84,7 @@ if __name__=='__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
+
     # TODO: Command Log /run_models_covids.py: 111
     input_command = sys.argv
     ind = [i for i in range(len(input_command)) if input_command[i] == "--load"]
@@ -99,25 +93,26 @@ if __name__=='__main__':
         input_command = input_command[:ind] + input_command[(ind + 2):]
     input_command = " ".join(input_command)
 
+
     # Loading Data
     print("predicting data at: %s" % args.dataset)
     dataloader = ParseData(args =args)
     train_encoder, train_decoder, train_batch, num_atoms = dataloader.load_train_data(is_train=True)
     val_encoder, val_decoder, val_batch, _ = dataloader.load_train_data(is_train=False)
     args.num_atoms = num_atoms
-    input_dim = dataloader.num_features
-
+    input_dim = 3 
+    output_dim= 2
 
     # Model Setup
     # Create the model
     obsrv_std = 0.01
     obsrv_std = torch.Tensor([obsrv_std]).to(device)
     z0_prior = Normal(torch.Tensor([0.0]).to(device), torch.Tensor([1.]).to(device))
-    model = create_ODE_model(args, input_dim,z0_prior, obsrv_std,device=device)
-    
-    # Training Step
+    model = create_ODE_model(args, input_dim,z0_prior, obsrv_std,device=device,output_dim=output_dim)
+
+    # Training Setup
     experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time()+8*60**2))
-    log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_Con_"  + str(args.condition_length) + ('_OBE_' if not args.heavyBall else '_HVB_') + str(args.pred_length) + "_" + str(experimentID) + ".log"
+    log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_social_"  + str(args.condition_length) +  ('_ODE_' if not args.heavyBall else '_HVB_') + str(args.pred_length) + "_" + str(experimentID) + ".log"
     if not os.path.exists("baseline_logs/"):
         utils.makedirs("baseline_logs/")
     logger = utils.get_logger(logpath=log_path, filepath=os.path.abspath(__file__))
@@ -160,7 +155,7 @@ if __name__=='__main__':
         del loss
         torch.cuda.empty_cache()
         # train_res, loss
-        return loss_value,train_res["MAPE"],train_res['MSE'],train_res["likelihood"],train_res["kl_first_p"],train_res["std_first_p"],forward_nfe,backward_nfe
+        return loss_value,train_res["MAPE"],train_res['MSE'],train_res['MAE'],train_res["likelihood"],train_res["kl_first_p"],train_res["std_first_p"],forward_nfe,backward_nfe
      
 
 
@@ -169,6 +164,7 @@ if __name__=='__main__':
         loss_list = []
         MAPE_list = []
         MSE_list = []
+        MAE_list = []
         likelihood_list = []
         kl_first_p_list = []
         std_first_p_list = []
@@ -190,10 +186,10 @@ if __name__=='__main__':
             batch_dict_encoder = utils.get_next_batch_new(train_encoder, device)
             batch_dict_decoder = utils.get_next_batch(train_decoder, device)
 
-            loss, MAPE,MSE,likelihood,kl_first_p,std_first_p,forward_nfe,backward_nfe = train_single_batch(model,batch_dict_encoder,batch_dict_decoder,kl_coef)
+            loss, MAPE,MSE,MAE,likelihood,kl_first_p,std_first_p,forward_nfe,backward_nfe = train_single_batch(model,batch_dict_encoder,batch_dict_decoder,kl_coef)
 
             #saving results
-            loss_list.append(loss), MAPE_list.append(MAPE), MSE_list.append(MSE),likelihood_list.append(
+            loss_list.append(loss), MAPE_list.append(MAPE), MSE_list.append(MSE),MAE_list.append(MAE),likelihood_list.append(
                likelihood), forward_nfe_list.append(forward_nfe),backward_nfe_list.append(backward_nfe)
             kl_first_p_list.append(kl_first_p), std_first_p_list.append(std_first_p)
 
@@ -203,9 +199,9 @@ if __name__=='__main__':
 
         scheduler.step()
 
-        message_train = 'Epoch {:04d} [Train seq (cond on sampled tp)] | Loss {:.6f} | MAPE {:.6F} | RMSE {:.6F} | Likelihood {:.6f} | KL fp {:.4f} | FP STD {:.4f} | ->nfe {:7.2f} | <-nfe {:7.2f}'.format(
+        message_train = 'Epoch {:04d} [Train seq (cond on sampled tp)] | Loss {:.6f} | MAPE {:.6F} | RMSE {:.6F} |MAE {:.6F} | Likelihood {:.6f} | KL fp {:.4f} | FP STD {:.4f} | ->nfe {:7.2f} | <-nfe {:7.2f}'.format(
             epo,
-            np.mean(loss_list), np.mean(MAPE_list),np.sqrt(np.mean(MSE_list)), np.mean(likelihood_list),
+            np.mean(loss_list), np.mean(MAPE_list),np.sqrt(np.mean(MSE_list)),np.mean(MAE_list), np.mean(likelihood_list),
             np.mean(kl_first_p_list), np.mean(std_first_p_list), np.mean(forward_nfe_list),np.mean(backward_nfe_list))
 
         return message_train,kl_coef
@@ -215,6 +211,7 @@ if __name__=='__main__':
         model.eval()
         MAPE_list = []
         MSE_list = []
+        MAE_list = []
 
 
         torch.cuda.empty_cache()
@@ -227,17 +224,16 @@ if __name__=='__main__':
                                                  args.num_atoms, edge_lamda=args.edge_lamda, kl_coef=kl_coef,
                                                  istest=False)
 
-            MAPE_list.append(val_res['MAPE']), MSE_list.append(val_res['MSE'])
+            MAPE_list.append(val_res['MAPE']), MSE_list.append(val_res['MSE']),MAE_list.append(val_res['MAE'])
             del batch_dict_encoder, batch_dict_decoder
             # train_res, loss
             torch.cuda.empty_cache()
 
-
-        message_val = 'Epoch {:04d} [Val seq (cond on sampled tp)] |  MAPE {:.6F} | RMSE {:.6F} |'.format(
+        message_val = 'Epoch {:04d} [Val seq (cond on sampled tp)] |  MAPE {:.6F} | RMSE {:.6F} | MAE {:.6F} |'.format(
             epo,
-            np.mean(MAPE_list), np.sqrt(np.mean(MSE_list)))
+            np.mean(MAPE_list), np.sqrt(np.mean(MSE_list)),np.mean(MAE_list))
 
-        return message_val, np.mean(MAPE_list),np.sqrt(np.mean(MSE_list))
+        return message_val, np.mean(MAPE_list),np.sqrt(np.mean(MSE_list)),np.mean(MAE_list)
 
 
     def test_data_covid(model, pred_length, condition_length, dataloader,device,args,kl_coef):
@@ -252,10 +248,13 @@ if __name__=='__main__':
         total["MAPE"] = 0
         total["RMSE"] = 0
         total["MSE"] = 0
+        total["MAE"] = 0
         total["kl_first_p"] = 0
         total["std_first_p"] = 0
         MAPE_each = []
         RMSE_each = []
+        MAE_each = []
+        
 
         n_test_batches = 0
 
@@ -277,6 +276,8 @@ if __name__=='__main__':
                             var = var.detach().item()
                         if key =="MAPE":
                             MAPE_each.append(var)
+                        elif key =="MAE":
+                            MAE_each.append(var)
                         elif key == "MSE": # assign value for both MSE and RMSE
                             RMSE_each.append(np.sqrt(var))
                             total["RMSE"] += np.sqrt(var)
@@ -291,13 +292,13 @@ if __name__=='__main__':
                     total[key] = total[key] / n_test_batches
 
 
-        return total, utils.print_MAPE(MAPE_each), utils.print_MAPE(RMSE_each)
+        return total, utils.print_MAPE(MAPE_each), utils.print_MAPE(RMSE_each),utils.print_MAPE(MAE_each)
 
     # Training and Testing
     for epo in range(1, args.niters + 1):
 
         message_train, kl_coef = train_epoch(epo)
-        message_val, MAPE_val, RMSE_val = val_epoch(epo,kl_coef)
+        message_val, MAPE_val, RMSE_val, MAE_val = val_epoch(epo,kl_coef)
 
         if epo % n_iters_to_viz == 0:
             # Logging Train and Val
@@ -308,11 +309,11 @@ if __name__=='__main__':
 
             # Testing
             model.eval()
-            test_res,MAPE_each,RMSE_each = test_data_covid(model, args.pred_length, args.condition_length, dataloader,
+            test_res,MAPE_each,RMSE_each,MAE_each = test_data_covid(model, args.pred_length, args.condition_length, dataloader,
                                  device=device, args = args, kl_coef=kl_coef)
-            message_test = 'Epoch {:04d} [Test seq (cond on sampled tp)] | MAPE {:.6F} | RMSE {:.6F}|'.format(
+            message_test = 'Epoch {:04d} [Test seq (cond on sampled tp)] | MAPE {:.6F} | RMSE {:.6F}| MAE {:.6F}|'.format(
                 epo,
-                test_res["MAPE"], test_res["RMSE"])
+                test_res["MAPE"], test_res["RMSE"],test_res["MAE"])
 
 
             if MAPE_val < best_val_MAPE:
@@ -329,8 +330,9 @@ if __name__=='__main__':
             if test_res["MAPE"] < best_test_MAPE:
                 best_test_MAPE = test_res["MAPE"]
                 best_test_RMSE = test_res["RMSE"]
-                message_best = 'Epoch {:04d} [Test seq (cond on sampled tp)] | Best Test MAPE {:.6f}|Best Test RMSE {:.6f}|'.format(epo,
-                                                                                                        best_test_MAPE,best_test_RMSE)
+                best_test_MAE = test_res["MAE"]
+                message_best = 'Epoch {:04d} [Test seq (cond on sampled tp)] | Best Test MAPE {:.6f}|Best Test RMSE {:.6f}|Best Test MAE {:.6f}|'.format(epo,
+                                                                                                        best_test_MAPE,best_test_RMSE,best_test_MAE)
                 logger.info(MAPE_each)
                 logger.info(RMSE_each)
                 logger.info(message_best)

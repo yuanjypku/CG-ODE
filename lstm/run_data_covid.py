@@ -172,7 +172,7 @@ if __name__=='__main__':
         scheduler.step()
         message_train = 'Epoch {:04d} [Train seq (cond on sampled tp)] | Loss {:.6f} | MAPE {:.6F} | RMSE {:.6F} |MAE {:.6F} | Likelihood {:.6f} | KL fp {:.4f} | FP STD {:.4f} | ->nfe {:7.2f} | <-nfe {:7.2f}'.format(
             epo,
-            np.mean(loss_list), np.mean(MAPE_list),np.sqrt(np.mean(MSE_list)),np.sqrt(np.mean(MAE_list)), np.mean(likelihood_list),
+            np.mean(loss_list), np.mean(MAPE_list),np.sqrt(np.mean(MSE_list)),np.mean(MAE_list), np.mean(likelihood_list),
             np.mean(kl_first_p_list), np.mean(std_first_p_list), np.mean(forward_nfe_list),np.mean(backward_nfe_list))
 
         return message_train

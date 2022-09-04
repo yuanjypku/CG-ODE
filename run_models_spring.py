@@ -184,13 +184,14 @@ if __name__ == '__main__':
         del loss
         torch.cuda.empty_cache()
         # train_res, loss
-        return loss_value,train_res["MAPE"],train_res['MSE'],train_res["likelihood"],train_res["kl_first_p"],train_res["std_first_p"],forward_nfe,backward_nfe
+        return loss_value,train_res["MAPE"],train_res['MSE'],train_res['MAE'],train_res["likelihood"],train_res["kl_first_p"],train_res["std_first_p"],forward_nfe,backward_nfe
 
     def train_epoch(epo):
         model.train()
         loss_list = []
         MAPE_list = []
         MSE_list = []
+        MAE_list = []
         likelihood_list = []
         kl_first_p_list = []
         std_first_p_list = []
@@ -212,10 +213,10 @@ if __name__ == '__main__':
             batch_dict_graph = utils.get_next_batch_new(train_graph, device)
             batch_dict_decoder = utils.get_next_batch(train_decoder, device)
 
-            loss, MAPE,MSE,likelihood,kl_first_p,std_first_p,forward_nfe,backward_nfe = train_single_batch(model,batch_dict_encoder,batch_dict_decoder,batch_dict_graph,kl_coef)
+            loss, MAPE,MSE,MAE,likelihood,kl_first_p,std_first_p,forward_nfe,backward_nfe = train_single_batch(model,batch_dict_encoder,batch_dict_decoder,batch_dict_graph,kl_coef)
 
             #saving results
-            loss_list.append(loss), MAPE_list.append(MAPE), MSE_list.append(MSE),likelihood_list.append(
+            loss_list.append(loss), MAPE_list.append(MAPE), MSE_list.append(MSE),MAE_list.append(MAE),likelihood_list.append(
                likelihood), forward_nfe_list.append(forward_nfe),backward_nfe_list.append(backward_nfe)
             kl_first_p_list.append(kl_first_p), std_first_p_list.append(std_first_p)
 
@@ -236,6 +237,7 @@ if __name__ == '__main__':
         model.eval()
         MAPE_list = []
         MSE_list = []
+        MAE_list = []
 
 
         torch.cuda.empty_cache()
@@ -249,17 +251,17 @@ if __name__ == '__main__':
                                                  args.num_atoms, edge_lamda=args.edge_lamda, kl_coef=kl_coef,
                                                  istest=False)
 
-            MAPE_list.append(val_res['MAPE']), MSE_list.append(val_res['MSE'])
+            MAPE_list.append(val_res['MAPE']), MSE_list.append(val_res['MSE']),MAE_list.append(val_res['MAE'])
             del batch_dict_encoder, batch_dict_graph, batch_dict_decoder
             # train_res, loss
             torch.cuda.empty_cache()
 
 
-        message_val = 'Epoch {:04d} [Val seq (cond on sampled tp)] |  MAPE {:.6F} | RMSE {:.6F} |'.format(
+        message_val = 'Epoch {:04d} [Val seq (cond on sampled tp)] |  MAPE {:.6F} | RMSE {:.6F} | MAE {:.6F} |'.format(
             epo,
-            np.mean(MAPE_list), np.sqrt(np.mean(MSE_list)))
+            np.mean(MAPE_list), np.sqrt(np.mean(MSE_list)),np.sqrt(np.mean(MAE_list)))
 
-        return message_val, np.mean(MAPE_list),np.sqrt(np.mean(MSE_list))
+        return message_val, np.mean(MAPE_list), np.sqrt(np.mean(MSE_list)),np.mean(MAE_list)
 
     # Test once: for loaded model
     if args.load is not None:
@@ -280,7 +282,8 @@ if __name__ == '__main__':
     for epo in range(1, args.niters + 1):
 
         message_train, kl_coef = train_epoch(epo)
-        message_val, MAPE_val, RMSE_val = val_epoch(epo,kl_coef)
+        message_val, MAPE_val, RMSE_val, MAE_val = val_epoch(epo,kl_coef)
+        message_val, MAPE_val, RMSE_val,MAE_val = val_epoch(epo, kl_coef)
 
         if epo % n_iters_to_viz == 0:
             # Logging Train and Val
@@ -294,9 +297,9 @@ if __name__ == '__main__':
             model.eval()
             test_res,MAPE_each,RMSE_each = test_data_spring(model, args.pred_length, args.condition_length, dataloader,
                                  device=device, args = args, kl_coef=kl_coef)
-            message_test = 'Epoch {:04d} [Test seq (cond on sampled tp)] | MAPE {:.6F} | RMSE {:.6F}|'.format(
+            message_test = 'Epoch {:04d} [Test seq (cond on sampled tp)] | MAPE {:.6F} | RMSE {:.6F}| MAE {:.6F}|'.format(
                 epo,
-                test_res["MAPE"], test_res["RMSE"])
+                test_res["MAPE"], test_res["RMSE"],test_res["MAE"])
 
 
             if MAPE_val < best_val_MAPE:
@@ -323,8 +326,10 @@ if __name__ == '__main__':
             if test_res["MAPE"] < best_test_MAPE:
                 best_test_MAPE = test_res["MAPE"]
                 best_test_RMSE = test_res["RMSE"]
-                message_best = 'Epoch {:04d} [Test seq (cond on sampled tp)] | Best Test MAPE {:.6f}|Best Test RMSE {:.6f}|'.format(epo,
-                                                                                                        best_test_MAPE,best_test_RMSE)
+                best_test_MAE  = test_res["MAE"]
+                message_best = 'Epoch {:04d} [Test seq (cond on sampled tp)] | Best Test MAPE {:.6f}|Best Test RMSE {:.6f}|Best Test MAE {:.6f}|'.format(epo,
+                                                                                                        best_test_MAPE,best_test_RMSE,best_test_MAE)
+
                 logger.info(MAPE_each)
                 logger.info(RMSE_each)
                 logger.info(message_best)
