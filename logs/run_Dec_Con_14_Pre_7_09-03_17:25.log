@@ -1,4 +1,0 @@
-/nvme/yuanjingyang/CG-ODE/run_models_covid.py
-/nvme/yuanjingyang/CG-ODE/run_models_covid.py --heavyBall --rec-layers 1 -e Cheb_cat --pred_length 7 --condition_length 14
-Namespace(save='experiments/', load=None, dataset='Dec', datapath='data/', pred_length=7, condition_length=14, features='Confirmed,Deaths,Recovered,Mortality_Rate,Testing_Rate,Population,Mobility', split_interval=3, feature_out='Deaths', niters=100, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=20, rec_layers=1, gen_layers=1, encoder='Cheb_cat', graf_layer=1, cheb_K=2, heavyBall=True, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1, augment_dim=0, solver='rk4', rtol=0.01, atol=0.01, alias='run', output_dim=1, feature_out_index=[1], num_atoms=50)
-run

@@ -12,7 +12,7 @@ import lib.utils as utils
 
 
 
-def create_ODE_model(args, input_dim, z0_prior,obsrv_std,device):
+def create_ODE_model(args, input_dim, z0_prior,obsrv_std,device,output_dim=1):
     # RNN encoder
     # TODO:用args来调整hls和nl和T2
     resem_dim = 64*2 # mu & std
@@ -29,7 +29,7 @@ def create_ODE_model(args, input_dim, z0_prior,obsrv_std,device):
     diffeq_solver = DiffeqSolver(ode_func, args.solver, args=args, odeint_rtol=args.rtol, odeint_atol=args.atol, device=device)
 
     # Decoder
-    decoder = nn.Sequential(nn.Linear(64,1), nn.Dropout(args.dropout)).to(device)
+    decoder = nn.Sequential(nn.Linear(64,output_dim), nn.Dropout(args.dropout)).to(device)
 
     ode_hidden_dim = 1
     model = SeqODE(ode_hidden_dim, encoder, decoder, diffeq_solver,z0_prior,device, obsrv_std=obsrv_std)

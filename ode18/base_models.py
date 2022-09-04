@@ -182,7 +182,9 @@ class SeqODE(VAE_Baseline):
             batch_dict_decoder["data"], pred_node,
             mask=None, method='MSE', istest=istest)  # [1]
 
-
+        mae_node = self.get_loss(
+			batch_dict_decoder["data"], pred_node,
+			mask=None, method='MAE', istest=istest)  # [1]
 		# loss
 
         loss = - torch.logsumexp(rec_likelihood - kl_coef * kldiv_z0,0)
@@ -196,6 +198,7 @@ class SeqODE(VAE_Baseline):
         results["likelihood"] = torch.mean(rec_likelihood).data.item()
         results["MAPE"] = torch.mean(mape_node).data.item()
         results["MSE"] = torch.mean(mse_node).data.item()
+        results["MAE"] = torch.mean(mae_node).data.item() 
         results["kl_first_p"] =  kldiv_z0.detach().data.item()
         results["std_first_p"] = torch.mean(fp_std).detach().data.item()
 

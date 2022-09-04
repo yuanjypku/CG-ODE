@@ -286,10 +286,12 @@ def test_data_spring(model, pred_length, condition_length, dataloader,device,arg
 	total["MAPE"] = 0
 	total["RMSE"] = 0
 	total["MSE"] = 0
+	total["MAE"] = 0
 	total["kl_first_p"] = 0
 	total["std_first_p"] = 0
 	MAPE_each = []
 	RMSE_each = []
+	MAE_each=[]
 
 	n_test_batches = 0
 
@@ -311,6 +313,8 @@ def test_data_spring(model, pred_length, condition_length, dataloader,device,arg
 						var = var.detach().item()
 					if key =="MAPE":
 						MAPE_each.append(var)
+					elif key == "MAE":
+						MAE_each.append(var)
 					elif key == "MSE": # assign value for both MSE and RMSE
 						RMSE_each.append(np.sqrt(var))
 						total["RMSE"] += np.sqrt(var)

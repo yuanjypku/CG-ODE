@@ -1,4 +1,0 @@
-/nvme/yuanjingyang/CG-ODE/run_models_social.py
-run_models_social.py --heavyBall --rec-layers 1 -e Cheb_cat --solver dopri5 --rtol 1e-3 --atol 1e-5 --pred_length 40 --condition_length 80
-Namespace(save='experiments/', load=None, dataset='social', datapath='data/', pred_length=40, condition_length=80, training_end_time=320, add_popularity=True, features_inc=True, split_interval=5, niters=50, lr=0.005, batch_size=8, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=30, rec_layers=1, gen_layers=1, encoder='Cheb_cat', graf_layer=1, cheb_K=2, heavyBall=True, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1, augment_dim=0, solver='dopri5', rtol=0.001, atol=1e-05, alias='run', feature_out_index=[0, 1], output_dim=2, num_atoms=80)
-run
