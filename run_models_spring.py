@@ -34,7 +34,7 @@ parser.add_argument('--test_K', type=int, default=30, help="Sample numuber for t
 
 parser.add_argument('--niters', type=int, default=100)
 parser.add_argument('--lr', type=float, default=5e-3, help="Starting learning rate.")
-parser.add_argument('-b', '--batch-size', type=int, default=320)
+parser.add_argument('-b', '--batch-size', type=int, default=32)
 parser.add_argument('-r', '--random-seed', type=int, default=1991, help="Random_seed")
 parser.add_argument('--dropout', type=float, default=0.2, help='Dropout rate (1 - keep probability).')
 parser.add_argument('--l2', type=float, default=1e-5, help='l2 regulazer')
