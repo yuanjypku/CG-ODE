@@ -100,15 +100,18 @@ class Seq2seq(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, input_size,output_size,hidden_layer_size,num_layers,dropout):
+    def __init__(self, input_size,output_size,hidden_layer_size,num_layers,dropout,use_GRU=False):
         super().__init__()
-        self.lstm = nn.LSTM(input_size, hidden_layer_size,num_layers)
+        if not use_GRU:
+            self.rnn = nn.LSTM(input_size, hidden_layer_size,num_layers)
+        else:
+            self.rnn = nn.GRU(input_size, hidden_layer_size,num_layers)
         self.linear = nn.Linear(hidden_layer_size, output_size)
 
     def forward(self, input_seq):
         # TODO:记得加上dropout？
         # TODO:加上可选的random h0 c0，比较哪个学的好
-        lstm_out, hidden_cell = self.lstm(input_seq,None) 
+        lstm_out, hidden_cell = self.rnn(input_seq,None) 
         ouput = self.linear(lstm_out)
         return ouput[-1,:,:] # 只保留序列尾端
 
@@ -155,6 +158,9 @@ def create_LSTM_model(args, input_dim,output_size,device):
     print_parameters(model)
     return model
 
+def create_GRU_model(args, input_dim,output_size, device):
+
+    pass
 
 
 if __name__ == '__main__':
