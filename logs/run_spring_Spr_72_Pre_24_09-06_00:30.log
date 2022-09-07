@@ -1,0 +1,4 @@
+/nvme/yuanjingyang/CG-ODE/run_models_spring.py
+run_models_spring.py --heavyBall --heavyBall --rec-layers 1 -e Cheb_cat --pred_length 24 --condition_length 72
+Namespace(save='experiments/', load=None, dataset='spring', datapath='data/', pred_length=24, condition_length=72, features='X,Y,vel_X,vel_Y', feature_out='X,Y', test_K=30, niters=100, lr=0.005, batch_size=32, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=30, rec_layers=1, gen_layers=1, encoder='Cheb_cat', graf_layer=1, cheb_K=2, heavyBall=True, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1, augment_dim=0, solver='rk4', rtol=0.01, atol=0.01, alias='run', output_dim=2, feature_out_index=[0, 1], num_atoms=50)
+run

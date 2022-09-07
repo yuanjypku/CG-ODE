@@ -35,7 +35,7 @@ parser.add_argument('--test_K', type=int, default=30, help="Sample numuber for t
 
 parser.add_argument('--niters', type=int, default=100)
 parser.add_argument('--lr', type=float, default=5e-3, help="Starting learning rate.")
-parser.add_argument('-b', '--batch-size', type=int, default=320)
+parser.add_argument('-b', '--batch-size', type=int, default=32)
 parser.add_argument('-r', '--random-seed', type=int, default=1991, help="Random_seed")
 parser.add_argument('--dropout', type=float, default=0.2, help='Dropout rate (1 - keep probability).')
 parser.add_argument('--l2', type=float, default=1e-5, help='l2 regulazer')
@@ -122,7 +122,7 @@ if __name__=='__main__':
 
     # Training Setup
     experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time()+8*60**2))
-    log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_social_"  + str(args.condition_length) +  ('_ODE_' if not args.heavyBall else '_HVB_') + str(args.pred_length) + "_" + str(experimentID) + ".log"
+    log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_spring_"  + str(args.condition_length) +  ('_ODE_' if not args.heavyBall else '_HVB_') + str(args.pred_length) + "_" + str(experimentID) + ".log"
     if not os.path.exists("baseline_logs/"):
         utils.makedirs("baseline_logs/")
     logger = utils.get_logger(logpath=log_path, filepath=os.path.abspath(__file__))
