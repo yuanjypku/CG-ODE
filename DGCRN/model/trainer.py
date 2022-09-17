@@ -32,7 +32,7 @@ class Trainer():
         self.cl = cl
         self.new_training_method = new_training_method
 
-    def train(self, input, real_val, ycl, idx=None, batches_seen=None):
+    def train(self,input, graph,real_val, idx=None, batches_seen=None):
         # input, ycl: [batch, D?, N?, T?]
         # real_value: [batch, N?, T?]
         self.iter += 1
@@ -44,38 +44,23 @@ class Trainer():
 
         self.model.train()
         self.optimizer.zero_grad()
-        if self.cl:
-            output = self.model(input,
-                                idx=idx,
-                                ycl=ycl,
-                                batches_seen=self.iter,
-                                task_level=self.task_level)
-        else:
-            output = self.model(input,
-                                idx=idx,
-                                ycl=ycl,
-                                batches_seen=self.iter,
-                                task_level=self.seq_out_len)
-
-        output = output.transpose(1, 3)
+        assert self.cl
+        output = self.model(input,
+                            graph,
+                            idx=idx,
+                            ycl=input,
+                            batches_seen=self.iter,
+                            task_level=self.task_level) # [K≡1, 1, N, 1]
+        
         real = torch.unsqueeze(real_val, dim=1)
-        predict = self.scaler.inverse_transform(output)
-
-        if self.cl:
-
-            loss = self.loss(predict[:, :, :, :self.task_level],
-                             real[:, :, :, :self.task_level], 0.0)
-            mape = util.masked_mape(predict[:, :, :, :self.task_level],
-                                    real[:, :, :, :self.task_level],
-                                    0.0).item()
-            rmse = util.masked_rmse(predict[:, :, :, :self.task_level],
-                                    real[:, :, :, :self.task_level],
-                                    0.0).item()
-        else:
-            loss = self.loss(predict, real, 0.0)
-            mape = util.masked_mape(predict, real, 0.0).item()
-            rmse = util.masked_rmse(predict, real, 0.0).item()
-
+        predict = output.squeeze()
+        
+        ''
+        loss = self.loss(predict,real, 0.0)
+        mape = util.masked_mape(predict,real, 0.0).item()
+        rmse = util.masked_rmse(predict,real, 0.0).item()  
+        mae = util.masked_mae(predict,real, 0.0).item()
+        
         loss.backward()
 
         if self.clip is not None:
@@ -83,16 +68,17 @@ class Trainer():
 
         self.optimizer.step()
 
-        return loss.item(), mape, rmse
+        return loss.item(), mape, rmse, mae
 
-    def eval(self, input, real_val, ycl):
+    def eval(self, input,graph, real_val, ycl): 
         self.model.eval()
         with torch.no_grad():
-            output = self.model(input, ycl=ycl)
-        output = output.transpose(1, 3)
+            output = self.model(input,graph, ycl=input,task_level=self.task_level)
+        
+        predict = output.squeeze()
         real = torch.unsqueeze(real_val, dim=1)
-        predict = self.scaler.inverse_transform(output)
         loss = self.loss(predict, real, 0.0)
         mape = util.masked_mape(predict, real, 0.0).item()
         rmse = util.masked_rmse(predict, real, 0.0).item()
-        return loss.item(), mape, rmse
+        mae = util.masked_mae(predict,real, 0.0).item()
+        return loss.item(), mape, rmse, mae

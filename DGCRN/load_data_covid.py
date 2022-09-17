@@ -55,10 +55,10 @@ class ParseData(object):
 
 
 
-        encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states = self.generate_train_val_dataloader(features,graphs,is_train)
+        encoder_data_loader, decoder_data_loader, encoder_graph_loader, num_batch, self.num_states = self.generate_train_val_dataloader(features,graphs,is_train)
 
 
-        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states
+        return encoder_data_loader, decoder_data_loader, encoder_graph_loader, num_batch, self.num_states
 
 
     def generate_train_val_dataloader(self,features,graphs,is_train = True):
@@ -84,18 +84,19 @@ class ParseData(object):
                                      collate_fn=lambda batch: self.variable_time_collate_fn_activity(
                                          batch))  # num_graph*num_ball [tt,vals,masks]
 
-        graph_decoder = graphs[:, self.args.condition_length:, :, :]  # [K,T2,N,N]
-        decoder_graph_loader = Loader(graph_decoder, batch_size=self.batch_size, shuffle=False)
+        # 这里进行大改！不再需要T2时间后的graph_decoder，而是需要T1时间的graph_encoder
+        graph_encoder = graphs[:, :self.args.condition_length, :, :]  # [K,T2,N,N]
+        encoder_graph_loader = Loader(graph_encoder, batch_size=self.batch_size, shuffle=False)
 
-        num_batch = len(decoder_data_loader)
-        assert len(decoder_data_loader) == len(decoder_graph_loader)
+        num_batch = len(encoder_graph_loader)
+        assert len(encoder_graph_loader) == len(encoder_graph_loader)
 
         # Inf-Generator
         encoder_data_loader = utils.inf_generator(encoder_data_loader)
-        decoder_graph_loader = utils.inf_generator(decoder_graph_loader)
+        encoder_graph_loader = utils.inf_generator(encoder_graph_loader)
         decoder_data_loader = utils.inf_generator(decoder_data_loader)
 
-        return encoder_data_loader, decoder_data_loader, decoder_graph_loader, num_batch, self.num_states
+        return encoder_data_loader, decoder_data_loader, encoder_graph_loader, num_batch, self.num_states
 
 
 
@@ -167,12 +168,13 @@ class ParseData(object):
             end_index = end_indexes[i]
             features_each = features[:, test_start_index:end_index+1, self.args.feature_out_index]  # [N,T2,D]
             features_each_origin = features_origin[:, test_start_index:end_index+1, self.args.feature_out_index]  # [N,T2,D]
-            graph_each = graphs[test_start_index:end_index+1, :, :] # [T2,N,N]
-            graphs_dec.append(torch.FloatTensor(graph_each))  # K*[T=1,N,N]
+            # graph_each = graphs[test_start_index:end_index+1, :, :] # [T2,N,N] 重大修改，改用condition length的部分
+            graph_each = graphs[start_index:test_start_index, :, :] 
+            graphs_dec.append(torch.FloatTensor(graph_each))  # K*[T1,N,N]
             masks_each = np.asarray([i for i in range(end_index - test_start_index+1)])
             features_masks_dec.append((features_each,features_each_origin, masks_each))
 
-        decoder_graph_loader = Loader(graphs_dec, batch_size=1, shuffle=False)
+        encoder_graph_loader = Loader(graphs_dec, batch_size=1, shuffle=False)
         decoder_data_loader = Loader(features_masks_dec, batch_size=1, shuffle=False,
                                      collate_fn=lambda batch: self.variable_test(batch))  #
 
@@ -181,12 +183,12 @@ class ParseData(object):
         # Inf-Generator
         # Inf-Generator
         encoder_data_loader = utils.inf_generator(encoder_data_loader)
-        decoder_graph_loader = utils.inf_generator(decoder_graph_loader)
+        encoder_graph_loader = utils.inf_generator(encoder_graph_loader)
         decoder_data_loader = utils.inf_generator(decoder_data_loader)
 
         num_batch = len(start_indexes)
 
-        return encoder_data_loader, decoder_data_loader, decoder_graph_loader,num_batch
+        return encoder_data_loader, decoder_data_loader, encoder_graph_loader,num_batch
 
     def feature_preprocessing(self, feature_input, graph_input, method ='norm_const',is_inc=True):
         '''
@@ -310,19 +312,8 @@ class ParseData(object):
         :param time_begin: 1
         :return:
         '''
-        data_list = []
-        edge_size_list = []
-
-        num_samples = feature.shape[0]
-
-        for i in tqdm(range(num_samples)):
-            data_per_graph, edge_size = self.transfer_one_graph(feature[i], edges[i], times)
-            data_list.append(data_per_graph)
-            edge_size_list.append(edge_size)
-
-        print("average number of edges per graph is %.4f" % np.mean(np.asarray(edge_size_list)))
-        data_loader = DataLoader(data_list, batch_size=batch_size,shuffle=False)
-
+        data_list = [i for i in feature]
+        data_loader = Loader(data_list, batch_size=batch_size, shuffle=False)
         return data_loader
 
     def add_mobility(self,graph_input, num_states,feature_input):

@@ -1,20 +1,23 @@
 import os
 import sys
 sys.path.append("/nvme/yuanjingyang/CG-ODE")
+sys.path.append("/nvme/yuanjingyang/CG-ODE/DGCRN/model")
 import time
 import random
-from DGCRN.load_data_covid import ParseData
+from load_data_covid import ParseData
 from tqdm import tqdm
 import argparse
 import numpy as np
 from random import SystemRandom
 import torch
 import torch.optim as optim
+from einops import rearrange
 import lib.utils as utils
 from torch.distributions.normal import Normal
+
 from model.net import DGCRN
-# TODO: Check it !!👇
-from lib.utils import test_data_covid 
+from model.trainer import Trainer
+# from lib.utils import test_data_covid
 
 
 parser = argparse.ArgumentParser('Coupled ODE')
@@ -35,7 +38,7 @@ parser.add_argument('--feature_out', type=str, default='Deaths',
 
 parser.add_argument('--niters', type=int, default=100)
 parser.add_argument('--lr', type=float, default=5e-3, help="Starting learning rate.")
-parser.add_argument('-b', '--batch-size', type=int, default=8)
+parser.add_argument('-b', '--batch-size', type=int, default=1)
 parser.add_argument('-r', '--random-seed', type=int, default=1991, help="Random_seed")
 parser.add_argument('--dropout', type=float, default=0.2, help='Dropout rate (1 - keep probability).')
 parser.add_argument('--l2', type=float, default=1e-5, help='l2 regulazer')
@@ -49,17 +52,13 @@ parser.add_argument('--ode-dims', type=int, default= 20, help="Dimensionality of
 parser.add_argument('--rec-layers', type=int, default=1, help="Number of layers in recognition model ")
 parser.add_argument('--gen-layers', type=int, default=1, help="Number of layers  ODE func ")
 
-# encoder choice
-parser.add_argument('--encoder','-e',type=str, default='base', help="CVPR, Cheb, Cheb_cat,...")
-parser.add_argument('--graf_layer', type=int, default=1, help="(CVPR mode)layer of graformers")
-parser.add_argument('--cheb_K', type=int, default=2, help="(Cheb mode)order of Cheblayer")
 
 parser.add_argument('--augment_dim', type=int, default=0, help='augmented dimension')
 parser.add_argument('--solver', type=str, default="rk4", help='dopri5,rk4,euler')
 parser.add_argument('--rtol', type=float,default=1e-2, help='tolerance of ode')
 parser.add_argument('--atol', type=float,default=1e-2, help='tolerance of ode adjent')
 
-parser.add_argument('--alias', type=str, default="run")
+parser.add_argument('--alias', type=str, default="DGCRN")
 args = parser.parse_args()
 
 
@@ -118,255 +117,140 @@ if __name__ == '__main__':
     args.num_atoms = num_atoms
     input_dim = dataloader.num_features
 
+
     # Model Setup
     # Create the model
-    obsrv_std = 0.01
-    obsrv_std = torch.Tensor([obsrv_std]).to(device)
-    z0_prior = Normal(torch.Tensor([0.0]).to(device), torch.Tensor([1.]).to(device))
-    model = create_CoupledODE_model(args, input_dim, z0_prior, obsrv_std, device)
-    args.in_dim = 7
-    model = DGCRN(2,
-                args.num_nodes,# N
-                device,# device
-                predefined_A=predefined_A, #两个大小在0，1之间的浮点数矩阵，最好改成inference输入
-                dropout=args.dropout,
-                subgraph_size=args.subgraph_size,# ？
-                node_dim=args.node_dim, # dim of nodes
-                middle_dim=2,
-                seq_length=args.condition_length, #input sequence length
-                in_dim=args.in_dim, # inputs dimension
-                out_dim=args.pred_length, # seq_out_len
-                layers=3,
-                list_weight=[0.05, 0.95, 0.95],
-                tanhalpha=3,
-                cl_decay_steps=3500,
-                rnn_size=64,
-                hyperGNN_dim=16)
-    # Load checkpoint for saved model
-    if args.load is not None:
-        ckpt_path = os.path.join(args.save, args.load)
-        utils.get_ckpt_model(ckpt_path, model, device)
-        print("loaded saved ckpt!")
-        #exit()
+    model = DGCRN(gcn_depth = 2,
+                  num_nodes = num_atoms,
+                  device = device,
+                  predefined_A=None, # TODO:修改
+                  dropout=args.dropout,
+                  subgraph_size=20,
+                  node_dim=num_atoms,
+                  middle_dim=2,
+                  seq_length=args.condition_length,
+                  in_dim=input_dim,# 修改了
+                #   out_dim=args.output_dim,# 修改了
+                  out_dim=5,# 修改了
+                  layers=3,
+                  list_weight=[0.05, 0.95, 0.95],
+                  tanhalpha=3,
+                  cl_decay_steps=2000,
+                  rnn_size=64,
+                  hyperGNN_dim=16)
+
+
+    engine = Trainer(model, args.lr, args.l2, clip=5,
+                     step_size = 2500, seq_out_len=12, scaler=None, device=device,
+                     cl=True, new_training_method=False)
 
 
     # Training Setup
-    log_path = "logs/" + args.alias +"_" + args.dataset +  "_Con_"  + str(args.condition_length) +  "_Pre_" + str(args.pred_length) + "_" + str(experimentID) + ".log"
+    log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_Con_"  + str(args.condition_length) +  "_Pre_" + str(args.pred_length) + "_" + str(experimentID) + ".log"
     if not os.path.exists("logs/"):
         utils.makedirs("logs/")
     logger = utils.get_logger(logpath=log_path, filepath=os.path.abspath(__file__))
     logger.info(input_command)
     logger.info(str(args))
     logger.info(args.alias)
-
-    # Optimizer
-    if args.optimizer == "AdamW":
-        optimizer =optim.AdamW(model.parameters(),lr=args.lr,weight_decay=args.l2)
-    elif args.optimizer == "Adam":
-        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 1000, eta_min=1e-9)
-
-
-    wait_until_kl_inc = 10
-    best_test_MAPE = np.inf
-    best_test_RMSE = np.inf
-    best_val_MAPE = np.inf
-    best_val_RMSE = np.inf
-    n_iters_to_viz = 1
-
-
-    def train_single_batch(model,batch_dict_encoder,batch_dict_decoder,batch_dict_graph,kl_coef):
-
-        optimizer.zero_grad()
-        train_res = model.compute_all_losses(batch_dict_encoder, batch_dict_decoder, batch_dict_graph,args.num_atoms,edge_lamda = args.edge_lamda, kl_coef=kl_coef,istest=False)
-        # 记录forward中的nfe
-        forward_nfe = model.diffeq_solver.ode_func.nfe
-        model.diffeq_solver.ode_func.nfe = 0
-        loss = train_res["loss"]
-        loss.backward()
-        backward_nfe = model.diffeq_solver.ode_func.nfe
-        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-        try:
-            torch.nn.utils.clip_grad_norm_(model.encoder_z0.gra_former.parameters(), 1)
-        except:
-            pass
-
-        optimizer.step()
-
-        loss_value = loss.data.item()
-
-        del loss
-        torch.cuda.empty_cache()
-        # train_res, loss
-        return loss_value,train_res["MAPE"],train_res['MSE'],train_res["likelihood"],train_res["kl_first_p"],train_res["std_first_p"],forward_nfe,backward_nfe
+    
+    batches_seen = 0
 
     def train_epoch(epo):
-        model.train()
-        loss_list = []
-        MAPE_list = []
-        MSE_list = []
-        likelihood_list = []
-        kl_first_p_list = []
-        std_first_p_list = []
-        forward_nfe_list = []
-        backward_nfe_list = []
-
-        torch.cuda.empty_cache()
-
+        train_loss = []
+        train_mape = []
+        train_rmse = []
+        train_mae = []
+        
         for itr in tqdm(range(train_batch)):
-
-            #utils.update_learning_rate(optimizer, decay_rate=0.999, lowest=args.lr / 10)
-            wait_until_kl_inc = 1000
-
-            if itr < wait_until_kl_inc:
-                kl_coef = 1
-            else:
-                kl_coef = 1*(1 - 0.99 ** (itr - wait_until_kl_inc))
-
-            batch_dict_encoder = utils.get_next_batch_new(train_encoder, device)
-            batch_dict_graph = utils.get_next_batch_new(train_graph, device)
+            batches_seen =0 # TODO
+            batch_dict_encoder = utils.get_next_batch_new(train_encoder, device) # [batch, N, T, D] 
+            batch_dict_graph = utils.get_next_batch_new(train_graph, device)     # [batch, T, N, N] 
             batch_dict_decoder = utils.get_next_batch(train_decoder, device)
 
-            loss, MAPE,MSE,likelihood,kl_first_p,std_first_p,forward_nfe,backward_nfe = train_single_batch(model,batch_dict_encoder,batch_dict_decoder,batch_dict_graph,kl_coef)
-
-            #saving results
-            loss_list.append(loss), MAPE_list.append(MAPE), MSE_list.append(MSE),likelihood_list.append(
-               likelihood), forward_nfe_list.append(forward_nfe),backward_nfe_list.append(backward_nfe)
-            kl_first_p_list.append(kl_first_p), std_first_p_list.append(std_first_p)
-
-            del batch_dict_encoder, batch_dict_graph, batch_dict_decoder
-                #train_res, loss
-            torch.cuda.empty_cache()
-
-        scheduler.step()
-
-        message_train = 'Epoch {:04d} [Train seq (cond on sampled tp)] | Loss {:.6f} | MAPE {:.6F} | RMSE {:.6F} | Likelihood {:.6f} | KL fp {:.4f} | FP STD {:.4f} | ->nfe {:7.2f} | <-nfe {:7.2f}'.format(
-            epo,
-            np.mean(loss_list), np.mean(MAPE_list),np.sqrt(np.mean(MSE_list)), np.mean(likelihood_list),
-            np.mean(kl_first_p_list), np.mean(std_first_p_list), np.mean(forward_nfe_list),np.mean(backward_nfe_list))
-
-        return message_train,kl_coef
-
-    def val_epoch(epo,kl_coef):
-        model.eval()
-        MAPE_list = []
-        MSE_list = []
-
-
-        torch.cuda.empty_cache()
-
-        for itr in tqdm(range(val_batch)):
-            batch_dict_encoder = utils.get_next_batch_new(val_encoder, device)
-            batch_dict_graph = utils.get_next_batch_new(val_graph, device)
-            batch_dict_decoder = utils.get_next_batch(val_decoder, device)
-
-            val_res = model.compute_all_losses(batch_dict_encoder, batch_dict_decoder, batch_dict_graph,
-                                                 args.num_atoms, edge_lamda=args.edge_lamda, kl_coef=kl_coef,
-                                                 istest=False)
-
-            MAPE_list.append(val_res['MAPE']), MSE_list.append(val_res['MSE'])
-            del batch_dict_encoder, batch_dict_graph, batch_dict_decoder
-            # train_res, loss
-            torch.cuda.empty_cache()
-
-
-        message_val = 'Epoch {:04d} [Val seq (cond on sampled tp)] |  MAPE {:.6F} | RMSE {:.6F} |'.format(
-            epo,
-            np.mean(MAPE_list), np.sqrt(np.mean(MSE_list)))
-
-        return message_val, np.mean(MAPE_list),np.sqrt(np.mean(MSE_list))
-
-    # Test once: for loaded model
-    if args.load is not None:
-        test_res, MAPE_each, RMSE_each = test_data_covid(model, args.pred_length, args.condition_length, dataloader,
-                                                   device=device, args=args, kl_coef=0)
-
-        message_test = 'Epoch {:04d} [Test seq (cond on sampled tp)] | Loss {:.6f} | MAPE {:.6F} | RMSE {:.6F} | Likelihood {:.6f} | KL fp {:.4f} | FP STD {:.4f}|'.format(
-            0,
-            test_res["loss"], test_res["MAPE"], test_res["RMSE"], test_res["likelihood"],
-            test_res["kl_first_p"], test_res["std_first_p"])
-
-        logger.info("Experiment " + str(experimentID))
-        logger.info(message_test)
-        logger.info(MAPE_each)
-        logger.info(RMSE_each)
-
-    # Training and Testing
-    for epo in range(1, args.niters + 1):
-
-        message_train, kl_coef = train_epoch(epo)
-        message_val, MAPE_val, RMSE_val = val_epoch(epo,kl_coef)
-
-        if epo % n_iters_to_viz == 0:
-            # Logging Train and Val
-            logger.info("Experiment " + str(experimentID))
-            logger.info(message_train)
-            logger.info(message_val)
-
-
-            # Testing
-            model.eval()
-            test_res,MAPE_each,RMSE_each = test_data_covid(model, args.pred_length, args.condition_length, dataloader,
-                                 device=device, args = args, kl_coef=kl_coef)
-            message_test = 'Epoch {:04d} [Test seq (cond on sampled tp)] | MAPE {:.6F} | RMSE {:.6F}|'.format(
-                epo,
-                test_res["MAPE"], test_res["RMSE"])
-
-
-            if MAPE_val < best_val_MAPE:
-                best_val_MAPE = MAPE_val
-                best_val_RMSE = RMSE_val
-                logger.info("Best Val!")
-                ckpt_path = os.path.join(args.save, "experiment_" + str(
-                    experimentID) + "_" + args.dataset + "_" + args.alias + "_" + str(
-                    args.condition_length) + "_" + str(
-                    args.pred_length) + "_epoch_" + str(epo) + "_mape_" + str(
-                    test_res["MAPE"]) + '.ckpt')
-                torch.save({
-                    'args': args,
-                    'state_dict': model.state_dict(),
-                }, ckpt_path)
-
-
-
-            logger.info(message_test)
-            logger.info(MAPE_each)
-            logger.info(RMSE_each)
-
-
-            if test_res["MAPE"] < best_test_MAPE:
-                best_test_MAPE = test_res["MAPE"]
-                best_test_RMSE = test_res["RMSE"]
-                message_best = 'Epoch {:04d} [Test seq (cond on sampled tp)] | Best Test MAPE {:.6f}|Best Test RMSE {:.6f}|'.format(epo,
-                                                                                                        best_test_MAPE,best_test_RMSE)
-                logger.info(MAPE_each)
-                logger.info(RMSE_each)
-                logger.info(message_best)
-                ckpt_path = os.path.join(args.save, "experiment_" + str(
-                    experimentID) +  "_" + args.dataset + "_" + args.alias+ "_" + str(
-                    args.condition_length) + "_" + str(
-                    args.pred_length) + "_epoch_" + str(epo) + "_mape_" + str(
-                    best_test_MAPE) + '.ckpt')
-                torch.save({
-                    'args': args,
-                    'state_dict': model.state_dict(),
-                }, ckpt_path)
-
-
-            torch.cuda.empty_cache()
+            batch_dict_encoder = rearrange(batch_dict_encoder, 'K N T D -> K D N T')
+            metrics = engine.train(input = batch_dict_encoder,
+                                graph = batch_dict_graph,
+                                real_val=batch_dict_decoder['data'][:,-1,0],
+                                idx=None,
+                                batches_seen=batches_seen)
+            train_loss.append(metrics[0])
+            train_mape.append(metrics[1])
+            train_rmse.append(metrics[2])
+            train_mae.append(metrics[3])
             
 
+        return train_loss, train_mape, train_rmse, train_mae
+
+    def val_epoch(epo):
+        valid_loss = []
+        valid_mape = []
+        valid_rmse = []
+        valid_mae = []
+        for itr in tqdm(range(val_batch)):
+            batches_seen =0 # TODO
+            batch_dict_encoder = utils.get_next_batch_new(val_encoder, device)# [batch, N, T, D] 
+            batch_dict_graph = utils.get_next_batch_new(val_graph, device)     # [batch, T, N, N] 
+            batch_dict_decoder = utils.get_next_batch(val_decoder, device)
+
+            batch_dict_encoder = rearrange(batch_dict_encoder, 'K N T D -> K D N T')
+            metrics = engine.eval(input = batch_dict_encoder,
+                                graph = batch_dict_graph,
+                                real_val=batch_dict_decoder['data'][:,-1,0],ycl=None)
+            valid_loss.append(metrics[0])
+            valid_mape.append(metrics[1])
+            valid_rmse.append(metrics[2])
+            valid_mae.append(metrics[3])
+        return valid_loss, valid_mape, valid_rmse, valid_mae
+
+    # Training and Testing
+    his_loss = []
+
+    for epo in range(1, args.niters + 1):
+        train_loss, train_mape, train_rmse, train_mae = train_epoch(epo)
+        valid_loss, valid_mape, valid_rmse, valid_mae = val_epoch(epo)
+        
+        mtrain_loss = np.mean(train_loss)
+        mtrain_mape = np.mean(train_mape)
+        mtrain_rmse = np.mean(train_rmse)
+        mtrain_mae = np.mean(train_mae)
+        
+
+        mvalid_loss = np.mean(valid_loss)
+        mvalid_mape = np.mean(valid_mape)
+        mvalid_rmse = np.mean(valid_rmse)
+        mvalid_mae = np.mean(valid_mae)
+        his_loss.append(mvalid_loss)
+        log = 'Epoch: {:03d}, Train Loss: {:.4f}, Train MAPE: {:.4f}, Train RMSE: {:.4f}, Train MAE: {:.4f}\
+                            , Valid Loss: {:.4f}, Valid MAPE: {:.4f}, Valid RMSE: {:.4f}, Valid MAE: {:.4f}'.format(
+                            epo, mtrain_loss, mtrain_mape, mtrain_rmse, mtrain_mae,
+                            mvalid_loss, mvalid_mape, mvalid_rmse, mvalid_mae)
+        print(log)
+        logger.info(log)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+    print("Training finished, begin testing")
+    encoder, decoder, graph, num_batch = dataloader.load_test_data(pred_length=args.pred_length,
+	 															   condition_length=args.condition_length)
+    MAPE_each = []
+    RMSE_each = []
+    MAE_each = []
+    with torch.no_grad():
+        for _ in tqdm(range(num_batch)):
+            batch_dict_encoder = utils.get_next_batch_new(encoder, device)
+            batch_dict_graph = utils.get_next_batch_new(graph, device)
+            batch_dict_decoder = utils.get_next_batch_test(decoder, device)
+            
+            batch_dict_encoder = rearrange(batch_dict_encoder, 'K N T D -> K D N T')
+            metrics = engine.eval(input = batch_dict_encoder.float(),
+                                graph = batch_dict_graph.float(),
+                                real_val=batch_dict_decoder['data'][:,-1,0].float(),ycl=None)
+            # valid_loss.append(metrics[0])
+            MAPE_each.append(metrics[1])
+            RMSE_each.append(metrics[2])
+            MAE_each.append(metrics[3])
+    
+    log = 'TEST: Test MAPE: {:.4f}, Test RMSE: {:.4f}, Test MAE: {:.4f}/epoch'.format(
+                          np.array(MAPE_each).mean(), np.array(RMSE_each).mean(),np.array(MAE_each).mean())
+    print(log)
+    logger.info(log)

@@ -8,29 +8,10 @@ import numpy as np
 import pandas as pd
 import math
 import time
-from layer import *
+from model.layer import *
 import sys
 from collections import OrderedDict
 
-def create_DGCRN_model():
-    model = DGCRN(2,
-                args.num_nodes,# N
-                device,# device
-                predefined_A=predefined_A, #两个大小在0，1之间的浮点数矩阵，最好改成inference输入
-                dropout=args.dropout,
-                subgraph_size=args.subgraph_size,# ？
-                node_dim=args.node_dim, # dim of nodes
-                middle_dim=2,
-                seq_length=args.seq_in_len, #input sequence length
-                in_dim=args.in_dim, # inputs dimension
-                out_dim=args.seq_out_len, # seq_out_len
-                layers=3,
-                list_weight=[0.05, 0.95, 0.95],
-                tanhalpha=3,
-                cl_decay_steps=3500,
-                rnn_size=64,
-                hyperGNN_dim=16)
-    return model
 
 class DGCRN(nn.Module):
     def __init__(self,
@@ -135,7 +116,7 @@ class DGCRN(nn.Module):
              input,
              Hidden_State,
              Cell_State,
-             predefined_A,
+             predefined_A, # [0/1 N N ] --modify--> [K ≡ 1  T1 N N]
              type='encoder',
              idx=None,
              i=None):
@@ -153,20 +134,20 @@ class DGCRN(nn.Module):
         if type == 'encoder':
 
             filter1 = self.GCN1_tg(hyper_input,
-                                   predefined_A[0]) + self.GCN1_tg_1(
-                                       hyper_input, predefined_A[1])
+                                   predefined_A[0][i]) + self.GCN1_tg_1(
+                                       hyper_input, predefined_A[0][i].T)
             filter2 = self.GCN2_tg(hyper_input,
-                                   predefined_A[0]) + self.GCN2_tg_1(
-                                       hyper_input, predefined_A[1])
+                                   predefined_A[0][i]) + self.GCN2_tg_1(
+                                       hyper_input, predefined_A[0][i].T)
 
         if type == 'decoder':
 
             filter1 = self.GCN1_tg_de(hyper_input,
-                                      predefined_A[0]) + self.GCN1_tg_de_1(
-                                          hyper_input, predefined_A[1])
+                                      predefined_A[0][i]) + self.GCN1_tg_de_1(
+                                          hyper_input, predefined_A[0][i].T)
             filter2 = self.GCN2_tg_de(hyper_input,
-                                      predefined_A[0]) + self.GCN2_tg_de_1(
-                                          hyper_input, predefined_A[1])
+                                      predefined_A[0][i]) + self.GCN2_tg_de_1(
+                                          hyper_input, predefined_A[0][i].T)
 
         nodevec1 = torch.tanh(self.alpha * torch.mul(nodevec1, filter1))
         nodevec2 = torch.tanh(self.alpha * torch.mul(nodevec2, filter2))
@@ -176,8 +157,8 @@ class DGCRN(nn.Module):
 
         adj = F.relu(torch.tanh(self.alpha * a))
 
-        adp = self.preprocessing(adj, predefined_A[0])
-        adpT = self.preprocessing(adj.transpose(1, 2), predefined_A[1])
+        adp = self.preprocessing(adj, predefined_A[0][i])
+        adpT = self.preprocessing(adj.transpose(1, 2), predefined_A[0][i].T)
 
         Hidden_State = Hidden_State.view(-1, self.num_nodes, self.hidden_size)
         Cell_State = Cell_State.view(-1, self.num_nodes, self.hidden_size)
@@ -208,14 +189,16 @@ class DGCRN(nn.Module):
 
     def forward(self,
                 input,
+                graph,
                 idx=None,
                 ycl=None,
                 batches_seen=None,
                 task_level=12):
         # 出大问题，这里的predefined_A是固定图不是时序图，需要改成时序输入[T N N]
         # input: [K D N T]
-        # predefined_A: [N N] ∈[0,1]
-        predefined_A = self.predefined_A
+        # predefined_A[0 or 1]: [N N] ∈[0,1]
+        # predefined_A = self.predefined_A
+        predefined_A = graph
         x = input
 
         batch_size = x.size(0)
@@ -224,7 +207,7 @@ class DGCRN(nn.Module):
 
         outputs = None
         for i in range(self.seq_length):
-            Hidden_State, Cell_State = self.step(torch.squeeze(x[..., i]),
+            Hidden_State, Cell_State = self.step(torch.squeeze(x[..., i], -1),
                                                  Hidden_State, Cell_State,
                                                  predefined_A, 'encoder', idx,
                                                  i)
@@ -251,7 +234,7 @@ class DGCRN(nn.Module):
                 sys.exit(0)
             Hidden_State, Cell_State = self.step(decoder_input, Hidden_State,
                                                  Cell_State, predefined_A,
-                                                 'decoder', idx, None)
+                                                 'decoder', idx, i)
 
             decoder_output = self.fc_final(Hidden_State)
 

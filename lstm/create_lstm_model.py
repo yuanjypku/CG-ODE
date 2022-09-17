@@ -145,7 +145,8 @@ def create_LSTM_model(args, input_dim,output_size,device):
                 output_size=resem_dim,
                 hidden_layer_size=200,
                 num_layers=5,
-                dropout=0.2,).to(device)
+                dropout=0.2,
+                use_GRU=args.GRU).to(device)
     
     decoder = Decoder(input_size=resem_dim,
                 output_size=output_size,
@@ -158,9 +159,7 @@ def create_LSTM_model(args, input_dim,output_size,device):
     print_parameters(model)
     return model
 
-def create_GRU_model(args, input_dim,output_size, device):
 
-    pass
 
 
 if __name__ == '__main__':

@@ -1,0 +1,44 @@
+/nvme/yuanjingyang/CG-ODE/DGCRN/run_DGCRN_covid.py
+/nvme/yuanjingyang/CG-ODE/DGCRN/run_DGCRN_covid.py
+Namespace(save='experiments/', load=None, dataset='Dec', datapath='data/', pred_length=14, condition_length=21, features='Confirmed,Deaths,Recovered,Mortality_Rate,Testing_Rate,Population,Mobility', split_interval=3, feature_out='Deaths', niters=100, lr=0.005, batch_size=1, random_seed=1991, dropout=0.2, l2=1e-05, optimizer='AdamW', clip=10, edge_lamda=0.5, z0_encoder='GTrans', rec_dims=64, ode_dims=20, rec_layers=1, gen_layers=1, augment_dim=0, solver='rk4', rtol=0.01, atol=0.01, alias='run', output_dim=1, feature_out_index=[1], num_atoms=50)
+run
+Epoch: 001, Train Loss: 16.9723, Train MAPE: 1.2875, Train RMSE: 33.9176, Train MAE: 16.9723                            , Valid Loss: 27.9182, Valid MAPE: 1.0985, Valid RMSE: 44.2838, Valid MAE/epoch
+Epoch: 002, Train Loss: 16.7048, Train MAPE: 1.6704, Train RMSE: 33.0501, Train MAE: 16.7048                            , Valid Loss: 28.1559, Valid MAPE: 1.0737, Valid RMSE: 44.5305, Valid MAE/epoch
+Epoch: 003, Train Loss: 16.7105, Train MAPE: 1.6941, Train RMSE: 33.0164, Train MAE: 16.7105                            , Valid Loss: 28.1328, Valid MAPE: 1.0762, Valid RMSE: 44.5062, Valid MAE/epoch
+Epoch: 004, Train Loss: 16.7015, Train MAPE: 1.6779, Train RMSE: 33.0379, Train MAE: 16.7015                            , Valid Loss: 27.9946, Valid MAPE: 1.0909, Valid RMSE: 44.3608, Valid MAE/epoch
+Epoch: 005, Train Loss: 16.6808, Train MAPE: 1.6459, Train RMSE: 33.0791, Train MAE: 16.6808                            , Valid Loss: 27.9359, Valid MAPE: 1.0970, Valid RMSE: 44.2997, Valid MAE/epoch
+Epoch: 006, Train Loss: 16.7044, Train MAPE: 1.6895, Train RMSE: 33.0206, Train MAE: 16.7044                            , Valid Loss: 28.0962, Valid MAPE: 1.0798, Valid RMSE: 44.4681, Valid MAE/epoch
+Epoch: 007, Train Loss: 16.7146, Train MAPE: 1.7173, Train RMSE: 32.9804, Train MAE: 16.7146                            , Valid Loss: 27.9771, Valid MAPE: 1.0922, Valid RMSE: 44.3451, Valid MAE/epoch
+Epoch: 008, Train Loss: 16.7111, Train MAPE: 1.7071, Train RMSE: 32.9945, Train MAE: 16.7111                            , Valid Loss: 28.1260, Valid MAPE: 1.0769, Valid RMSE: 44.4987, Valid MAE/epoch
+Epoch: 009, Train Loss: 16.6988, Train MAPE: 1.6888, Train RMSE: 33.0149, Train MAE: 16.6988                            , Valid Loss: 28.0443, Valid MAPE: 1.0852, Valid RMSE: 44.4131, Valid MAE/epoch
+Epoch: 010, Train Loss: 16.6990, Train MAPE: 1.6780, Train RMSE: 33.0367, Train MAE: 16.6990                            , Valid Loss: 28.0026, Valid MAPE: 1.0892, Valid RMSE: 44.3708, Valid MAE/epoch
+Epoch: 011, Train Loss: 16.7241, Train MAPE: 1.7552, Train RMSE: 32.9266, Train MAE: 16.7241                            , Valid Loss: 27.9668, Valid MAPE: 1.0934, Valid RMSE: 44.3332, Valid MAE/epoch
+Epoch: 012, Train Loss: 16.7031, Train MAPE: 1.6794, Train RMSE: 33.0366, Train MAE: 16.7031                            , Valid Loss: 27.9907, Valid MAPE: 1.0909, Valid RMSE: 44.3577, Valid MAE/epoch
+Epoch: 013, Train Loss: 16.7113, Train MAPE: 1.7283, Train RMSE: 32.9584, Train MAE: 16.7113                            , Valid Loss: 28.0244, Valid MAPE: 1.0878, Valid RMSE: 44.3928, Valid MAE/epoch
+Epoch: 014, Train Loss: 16.6949, Train MAPE: 1.6708, Train RMSE: 33.0424, Train MAE: 16.6949                            , Valid Loss: 28.0858, Valid MAPE: 1.0809, Valid RMSE: 44.4581, Valid MAE/epoch
+Epoch: 015, Train Loss: 16.7049, Train MAPE: 1.6666, Train RMSE: 33.0645, Train MAE: 16.7049                            , Valid Loss: 28.0273, Valid MAPE: 1.0864, Valid RMSE: 44.3977, Valid MAE/epoch
+Epoch: 016, Train Loss: 16.7127, Train MAPE: 1.7235, Train RMSE: 32.9685, Train MAE: 16.7127                            , Valid Loss: 28.0444, Valid MAPE: 1.0854, Valid RMSE: 44.4137, Valid MAE/epoch
+Epoch: 017, Train Loss: 16.7047, Train MAPE: 1.7060, Train RMSE: 32.9906, Train MAE: 16.7047                            , Valid Loss: 28.0555, Valid MAPE: 1.0842, Valid RMSE: 44.4258, Valid MAE/epoch
+Epoch: 018, Train Loss: 16.7077, Train MAPE: 1.7029, Train RMSE: 32.9981, Train MAE: 16.7077                            , Valid Loss: 28.0790, Valid MAPE: 1.0820, Valid RMSE: 44.4489, Valid MAE/epoch
+Epoch: 019, Train Loss: 16.7225, Train MAPE: 1.7453, Train RMSE: 32.9402, Train MAE: 16.7225                            , Valid Loss: 27.9755, Valid MAPE: 1.0926, Valid RMSE: 44.3417, Valid MAE/epoch
+Epoch: 020, Train Loss: 16.7254, Train MAPE: 1.7385, Train RMSE: 32.9551, Train MAE: 16.7254                            , Valid Loss: 28.1194, Valid MAPE: 1.0777, Valid RMSE: 44.4920, Valid MAE/epoch
+Epoch: 021, Train Loss: 16.7119, Train MAPE: 1.6999, Train RMSE: 33.0105, Train MAE: 16.7119                            , Valid Loss: 28.0539, Valid MAPE: 1.0843, Valid RMSE: 44.4238, Valid MAE/epoch
+Epoch: 022, Train Loss: 16.7208, Train MAPE: 1.7225, Train RMSE: 32.9786, Train MAE: 16.7208                            , Valid Loss: 28.0619, Valid MAPE: 1.0837, Valid RMSE: 44.4311, Valid MAE/epoch
+Epoch: 023, Train Loss: 16.7150, Train MAPE: 1.7279, Train RMSE: 32.9638, Train MAE: 16.7150                            , Valid Loss: 28.0210, Valid MAPE: 1.0877, Valid RMSE: 44.3893, Valid MAE/epoch
+Epoch: 024, Train Loss: 16.7114, Train MAPE: 1.7194, Train RMSE: 32.9757, Train MAE: 16.7114                            , Valid Loss: 28.0463, Valid MAPE: 1.0851, Valid RMSE: 44.4163, Valid MAE/epoch
+Epoch: 025, Train Loss: 16.7122, Train MAPE: 1.7297, Train RMSE: 32.9577, Train MAE: 16.7122                            , Valid Loss: 28.0102, Valid MAPE: 1.0888, Valid RMSE: 44.3788, Valid MAE/epoch
+Epoch: 026, Train Loss: 16.7168, Train MAPE: 1.7491, Train RMSE: 32.9286, Train MAE: 16.7168                            , Valid Loss: 28.0006, Valid MAPE: 1.0901, Valid RMSE: 44.3685, Valid MAE/epoch
+Epoch: 027, Train Loss: 16.7111, Train MAPE: 1.7284, Train RMSE: 32.9590, Train MAE: 16.7111                            , Valid Loss: 27.9364, Valid MAPE: 1.0966, Valid RMSE: 44.3018, Valid MAE/epoch
+Epoch: 028, Train Loss: 16.7325, Train MAPE: 1.7333, Train RMSE: 32.9715, Train MAE: 16.7325                            , Valid Loss: 28.1052, Valid MAPE: 1.0789, Valid RMSE: 44.4780, Valid MAE/epoch
+Epoch: 029, Train Loss: 16.6987, Train MAPE: 1.7418, Train RMSE: 32.9247, Train MAE: 16.6987                            , Valid Loss: 27.9011, Valid MAPE: 1.1005, Valid RMSE: 44.2650, Valid MAE/epoch
+Epoch: 030, Train Loss: 16.7166, Train MAPE: 1.7516, Train RMSE: 32.9236, Train MAE: 16.7166                            , Valid Loss: 28.0186, Valid MAPE: 1.0882, Valid RMSE: 44.3872, Valid MAE/epoch
+Epoch: 031, Train Loss: 16.7103, Train MAPE: 1.7191, Train RMSE: 32.9749, Train MAE: 16.7103                            , Valid Loss: 28.0825, Valid MAPE: 1.0810, Valid RMSE: 44.4552, Valid MAE/epoch
+Epoch: 032, Train Loss: 16.7007, Train MAPE: 1.7005, Train RMSE: 32.9958, Train MAE: 16.7007                            , Valid Loss: 28.0657, Valid MAPE: 1.0831, Valid RMSE: 44.4367, Valid MAE/epoch
+Epoch: 033, Train Loss: 16.6809, Train MAPE: 1.7101, Train RMSE: 32.9620, Train MAE: 16.6809                            , Valid Loss: 27.9007, Valid MAPE: 1.1004, Valid RMSE: 44.2650, Valid MAE/epoch
+Epoch: 034, Train Loss: 16.7109, Train MAPE: 1.7200, Train RMSE: 32.9733, Train MAE: 16.7109                            , Valid Loss: 28.0023, Valid MAPE: 1.0895, Valid RMSE: 44.3712, Valid MAE/epoch
+Epoch: 035, Train Loss: 16.7220, Train MAPE: 1.7711, Train RMSE: 32.8951, Train MAE: 16.7220                            , Valid Loss: 27.9823, Valid MAPE: 1.0920, Valid RMSE: 44.3499, Valid MAE/epoch
+Epoch: 036, Train Loss: 16.7085, Train MAPE: 1.7400, Train RMSE: 32.9362, Train MAE: 16.7085                            , Valid Loss: 27.9900, Valid MAPE: 1.0909, Valid RMSE: 44.3591, Valid MAE/epoch
+Epoch: 037, Train Loss: 16.7091, Train MAPE: 1.7360, Train RMSE: 32.9431, Train MAE: 16.7091                            , Valid Loss: 28.0065, Valid MAPE: 1.0894, Valid RMSE: 44.3746, Valid MAE/epoch
+Epoch: 038, Train Loss: 16.7039, Train MAPE: 1.7325, Train RMSE: 32.9458, Train MAE: 16.7039                            , Valid Loss: 27.9603, Valid MAPE: 1.0942, Valid RMSE: 44.3274, Valid MAE/epoch
+Epoch: 039, Train Loss: 16.7070, Train MAPE: 1.7456, Train RMSE: 32.9257, Train MAE: 16.7070                            , Valid Loss: 27.9599, Valid MAPE: 1.0945, Valid RMSE: 44.3266, Valid MAE/epoch
+Epoch: 040, Train Loss: 16.7104, Train MAPE: 1.7421, Train RMSE: 32.9338, Train MAE: 16.7104                            , Valid Loss: 27.9958, Valid MAPE: 1.0911, Valid RMSE: 44.3623, Valid MAE/epoch

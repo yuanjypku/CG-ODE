@@ -269,6 +269,9 @@ def load_adj(pkl_filename):
     sensor_ids, sensor_id_to_ind, adj_mx = load_pickle(pkl_filename)
     return [asym_adj(adj_mx), asym_adj(np.transpose(adj_mx))]
 
+def load_dataset_covid(dataset_dir,batch_size):
+    
+    pass
 
 def load_dataset(dataset_dir,
                  batch_size,

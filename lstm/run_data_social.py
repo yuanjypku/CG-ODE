@@ -29,6 +29,8 @@ parser.add_argument('--features_inc', type=bool, default=True,help="selected fea
 parser.add_argument('--split_interval', type=int, default=5,
                     help="number of days between two adjacent starting date of two series.")
 
+parser.add_argument('-g','--GRU',action='store_true')
+
 parser.add_argument('--niters', type=int, default=50)
 parser.add_argument('--lr', type=float, default=5e-3, help="Starting learning rate.")
 parser.add_argument('-b', '--batch-size', type=int, default=8)
@@ -89,7 +91,7 @@ if __name__=='__main__':
 
     # Training Setup
     experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time()+8*60**2))
-    log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_social_"  + str(args.condition_length) +  "_LSTM_" + str(args.pred_length) + "_" + str(experimentID) + ".log"
+    log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_social_"  + str(args.condition_length) +  ("_GRU_" if args.GRU else "_LSTM_") + str(args.pred_length) + "_" + str(experimentID) + ".log"
     if not os.path.exists("baseline_logs/"):
         utils.makedirs("baseline_logs/")
     logger = utils.get_logger(logpath=log_path, filepath=os.path.abspath(__file__))

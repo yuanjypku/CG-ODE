@@ -33,6 +33,8 @@ parser.add_argument('--feature_out', type=str, default='X,Y',
                     help="X,Y")
 parser.add_argument('--test_K', type=int, default=30, help="Sample numuber for testing")
 
+parser.add_argument('-g','--GRU',action='store_true')
+
 parser.add_argument('--niters', type=int, default=100)
 parser.add_argument('--lr', type=float, default=5e-3, help="Starting learning rate.")
 parser.add_argument('-b', '--batch-size', type=int, default=32)
@@ -102,7 +104,7 @@ if __name__ == '__main__':
 
     # Training Setup
     experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time()+8*60**2))
-    log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_spring_"  + str(args.condition_length) +  "_LSTM_" + str(args.pred_length) + "_" + str(experimentID) + ".log"
+    log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_spring_"  + str(args.condition_length) +  ("_GRU_" if args.GRU else "_LSTM_") + str(args.pred_length) + "_" + str(experimentID) + ".log"
     if not os.path.exists("baseline_logs/"):
         utils.makedirs("baseline_logs/")
     logger = utils.get_logger(logpath=log_path, filepath=os.path.abspath(__file__))

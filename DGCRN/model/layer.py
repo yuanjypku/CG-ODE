@@ -13,7 +13,7 @@ class gconv_RNN(nn.Module):
 
     def forward(self, x, A):
 
-        x = torch.einsum('nvc,nvw->nwc', (x, A))
+        x = torch.einsum('nvc,nvw->nwc', (x.float(), A))
         return x.contiguous()
 
 
@@ -33,7 +33,7 @@ class gcn(nn.Module):
         if type == 'RNN':
             self.gconv = gconv_RNN()
             self.gconv_preA = gconv_hyper()
-            self.mlp = nn.Linear((gdep + 1) * dims[0], dims[1])
+            self.mlp = nn.Linear((gdep + 1) * dims[0], dims[1]) # type=RNN, 这里定义mlp
 
         elif type == 'hyper':
             self.gconv = gconv_hyper()
@@ -65,6 +65,6 @@ class gcn(nn.Module):
                 out.append(h)
         ho = torch.cat(out, dim=-1)
 
-        ho = self.mlp(ho)
+        ho = self.mlp(ho.float())
 
         return ho
