@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append("/nvme/yuanjingyang/CG-ODE")
+sys.path.append("/home1/yjy/CG-ODE")
 import os
 import time
 import random
@@ -16,6 +16,9 @@ from create_lstm_model import create_LSTM_model
 
 
 parser = argparse.ArgumentParser('LSTM')
+
+parser.add_argument('--save', type=str, default='base_experiments/', help="Path for save checkpoints")
+parser.add_argument('--load', type=str, default=None, help="name of ckpt. If None, run a new experiment.")
 
 parser.add_argument('--dataset', type=str, default='Dec', help="Dec")
 parser.add_argument('--datapath', type=str, default='data/', help="default data path")
@@ -75,6 +78,10 @@ if __name__=='__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
+    #Saving Path
+    file_name = os.path.basename(__file__)[:-3]  # run_models
+    utils.makedirs(args.save)
+
     # TODO: Command Log /run_models_covids.py: 111
     input_command = sys.argv
     ind = [i for i in range(len(input_command)) if input_command[i] == "--load"]
@@ -96,8 +103,15 @@ if __name__=='__main__':
     # Create the model
     model = create_LSTM_model(args,input_dim,output_dim,device)
 
+    # Load checkpoint for saved model
+    if args.load is not None:
+        ckpt_path = os.path.join(args.save, args.load)
+        utils.get_ckpt_model(ckpt_path, model, device)
+        print("loaded saved ckpt!")
+        #exit()
+
     # Training Setup
-    experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time()+8*60**2))
+    experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time() ))
     log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_Con_"  + str(args.condition_length) +  ("_GRU_" if args.GRU else "_LSTM_") + str(args.pred_length) + "_" + str(experimentID) + ".log"
     if not os.path.exists("baseline_logs/"):
         utils.makedirs("baseline_logs/")
@@ -291,7 +305,15 @@ if __name__=='__main__':
                 best_val_MAPE = MAPE_val
                 best_val_RMSE = RMSE_val
                 logger.info("Best Val!")
-                # don't save
+                ckpt_path = os.path.join(args.save, "experiment_" + str(
+                    experimentID) + "_" + args.dataset + "_" + args.alias + "_" + str(
+                    args.condition_length) + "_" + str(
+                    args.pred_length) + "_epoch_" + str(epo) + "_mape_" + str(
+                    test_res["MAPE"]) + '.ckpt')
+                torch.save({
+                    'args': args,
+                    'state_dict': model.state_dict(),
+                }, ckpt_path)
 
             logger.info(message_test)
             logger.info(MAPE_each)

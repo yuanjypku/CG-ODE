@@ -111,7 +111,7 @@ if __name__=='__main__':
     model = create_ODE_model(args, input_dim,z0_prior, obsrv_std,device=device,output_dim=output_dim)
 
     # Training Setup
-    experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time()+8*60**2))
+    experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time() ))
     log_path = "baseline_logs/" + args.alias +"_" + args.dataset +  "_social_"  + str(args.condition_length) +  ('_ODE_' if not args.heavyBall else '_HVB_') + str(args.pred_length) + "_" + str(experimentID) + ".log"
     if not os.path.exists("baseline_logs/"):
         utils.makedirs("baseline_logs/")

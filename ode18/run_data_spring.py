@@ -1,5 +1,5 @@
 import sys
-sys.path.append("/nvme/yuanjingyang/CG-ODE")
+sys.path.append("/home1/yjy/CG-ODE")
 import os
 import time
 import random
@@ -93,7 +93,7 @@ if __name__=='__main__':
     file_name = os.path.basename(__file__)[:-3]  # run_models
     utils.makedirs(args.save)
     # experimentID = int(SystemRandom().random() * 100000) 换个带时间的log名
-    experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time()+8*60**2))
+    experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time() ))
 
     #Command Log
     input_command = sys.argv

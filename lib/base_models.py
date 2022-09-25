@@ -89,6 +89,11 @@ class VAE_Baseline(nn.Module):
 
 		print(np.sum(pred_node))
 
+	def compute_all_preds(self, batch_dict_encoder,batch_dict_decoder,batch_dict_graph ,num_atoms,edge_lamda, kl_coef = 1.,istest=False):
+		pred_node,pred_edge, info,temporal_weights= self.get_reconstruction(batch_dict_encoder,batch_dict_decoder,num_atoms = num_atoms)
+		return batch_dict_decoder["data"], pred_node
+
+
 	def compute_all_losses(self, batch_dict_encoder,batch_dict_decoder,batch_dict_graph ,num_atoms,edge_lamda, kl_coef = 1.,istest=False):
 		'''
 
@@ -205,9 +210,3 @@ class VAE_Baseline(nn.Module):
 		# 	print(self.print_out_pred_sum(pred_node))
 
 		return results
-
-
-
-
-
-

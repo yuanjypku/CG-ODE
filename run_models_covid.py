@@ -106,7 +106,7 @@ if __name__ == '__main__':
     file_name = os.path.basename(__file__)[:-3]  # run_models
     utils.makedirs(args.save)
     # experimentID = int(SystemRandom().random() * 100000) 换个带时间的log名
-    experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time()+8*60**2))
+    experimentID = time.strftime("%m-%d_%H:%M", time.localtime(time.time() ))
 
     #Command Log
     input_command = sys.argv
@@ -270,18 +270,19 @@ if __name__ == '__main__':
 
     # Test once: for loaded model
     if args.load is not None:
-        test_res, MAPE_each, RMSE_each = test_data_covid(model, args.pred_length, args.condition_length, dataloader,
+        test_res, MAPE_each, RMSE_each, MAE_each = test_data_covid(model, args.pred_length, args.condition_length, dataloader,
                                                    device=device, args=args, kl_coef=0)
 
-        message_test = 'Epoch {:04d} [Test seq (cond on sampled tp)] | Loss {:.6f} | MAPE {:.6F} | RMSE {:.6F} | Likelihood {:.6f} | KL fp {:.4f} | FP STD {:.4f}|'.format(
+        message_test = 'Epoch {:04d} [Test seq (cond on sampled tp)] | Loss {:.6f} | MAPE {:.6F} | RMSE {:.6F} | MAE {:.6F} | Likelihood {:.6f} | KL fp {:.4f} | FP STD {:.4f}|'.format(
             0,
-            test_res["loss"], test_res["MAPE"], test_res["RMSE"], test_res["likelihood"],
+            test_res["loss"], test_res["MAPE"], test_res["RMSE"], test_res["MAE"], test_res["likelihood"],
             test_res["kl_first_p"], test_res["std_first_p"])
 
         logger.info("Experiment " + str(experimentID))
         logger.info(message_test)
         logger.info(MAPE_each)
         logger.info(RMSE_each)
+        logger.info(MAE_each)
 
     # Training and Testing
     for epo in range(1, args.niters + 1):
